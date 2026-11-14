@@ -19,3 +19,15 @@ class InvalidTitleError(DomainError):
 
 class OutputDirUnavailableError(DomainError):
     code: ClassVar[str] = "output_dir_unavailable"
+
+
+class InvalidUrlError(DomainError):
+    code: ClassVar[str] = "invalid_url"
+
+
+class DownloadFailedError(DomainError):
+    code: ClassVar[str] = "download_failed"
+
+
+class CutFailedError(DomainError):
+    code: ClassVar[str] = "cut_failed"
