@@ -4,14 +4,18 @@ Every finding raised by the blind pre-commit reviewer (see the commit workflow i
 
 ## How to record
 
-- After the review rounds of a work unit end, append one row per finding of every round, then stage this file in the same commit as the reviewed change. The rows are written after the review, so they are never part of a reviewed diff.
+- After the review rounds of a work unit end, append one row per finding of every round, then stage this file in the same commit as the reviewed change. The rows about a unit's own review are written after that review, so they are not part of its reviewed diff.
+- A round with no findings still gets one row, with `-` in Severity, Category and Status and `(no findings)` in Finding, so every round stays countable.
 - Identify the unit by **Branch** and **Unit** (the commit subject); both are known before the commit exists. Find the commit later with `git log --grep`.
+- **#:** global and sequential; continue from the last row. **Date:** ISO `YYYY-MM-DD`.
 - **Round:** 1 is the first review of a unit; 2 is the single allowed re-review.
-- **Verdict:** the verdict of that round, repeated on each of its rows. Count rounds as distinct (Unit, Round) pairs, not rows.
+- **Verdict:** `APPROVE` or `CHANGES` (changes requested), the verdict of that round, repeated on each of its rows. Count rounds as distinct (Unit, Round) pairs, not rows.
 - **Severity:** `blocking` or `suggestion`.
 - **Category:** `correctness`, `security`, `cross-engine`, `test-quality`, `docs`, `config`, `dependencies`, `ci`, `extensibility`, `scope`, `cleanup`, or `other` (extend this list here when a new category recurs).
 - **Status:** `fixed`, `deferred`, `declined`, or `no-change` (acknowledged, nothing to do).
-- **Notes:** free text: how it was fixed, where it was deferred to, or why it was declined.
+- **Notes:** free text: how it was fixed, where it was deferred to, or why it was declined. Do not use `|` inside cells.
+
+Exception: rows 1-62 were backfilled when this log was created, so they live in the commit `docs: add blind review findings log` rather than in the commits they describe.
 
 ## Findings
 
@@ -91,3 +95,8 @@ Every finding raised by the blind pre-commit reviewer (see the commit workflow i
 | 72 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: add blind review findings log` | 2 | APPROVE | suggestion | docs | deferred | Backfilled rows land in a later commit, against the same-commit rule | follow-up commit documents the backfill exception |
 | 73 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: add blind review findings log` | 2 | APPROVE | suggestion | docs | deferred | "Never part of a reviewed diff" is false for the commit that introduces the log | follow-up commit refines the wording |
 | 74 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: add blind review findings log` | 2 | APPROVE | suggestion | docs | fixed | A row referred to a phase unit the repo does not define | cell rephrased |
+| 75 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: refine review log rules` | 1 | APPROVE | suggestion | docs | deferred | `CLAUDE.md` step 5 wording still differs from the log about which rows skip review | align on the next `CLAUDE.md` change |
+| 76 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: refine review log rules` | 1 | APPROVE | suggestion | docs | deferred | Which date goes in Date is unspecified (review, commit or writing date) | next log rules change |
+| 77 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: refine review log rules` | 1 | APPROVE | suggestion | docs | deferred | No-findings row does not fix Verdict to `APPROVE` or say `-` is excluded from counts | next log rules change |
+| 78 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: refine review log rules` | 1 | APPROVE | suggestion | docs | declined | Unit is undefined if the commit subject changes after review | Unit is the subject as committed |
+| 79 | 2026-11-14 | `feat/phase-1-ipc-contract` | `docs: refine review log rules` | 1 | APPROVE | suggestion | cleanup | declined | Backfill exception line sits outside the bullet list | readability is fine |
