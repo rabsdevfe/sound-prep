@@ -6,6 +6,11 @@ mapping lane F configures (``core`` -> ``Contents/MacOS/core``, ``fw`` -> ``Cont
 package data present, the build's own signatures valid, the bundle signed like the app (hardened
 runtime plus the ADR's entitlement) and verified, then, launched like Finder (empty environment,
 cwd ``/``): argv is rejected, EOF exits 0, and an invalid request is answered per contract.
+
+``--dev [LAUNCHER]`` instead checks the launcher ``tauri dev`` runs (default
+``src-tauri/target/debug/core``, produced by ``cargo build`` in ``src-tauri``): the layout that
+``build.rs`` prepares beside it must let it start and answer an invalid request per contract.
+By design it skips the bundle-layout, build-only-file and signing checks of the default mode.
 """
 
 import argparse
@@ -23,6 +28,7 @@ from jsonschema import Draft202012Validator
 ROOT = Path(__file__).resolve().parents[2]
 TRIPLE = "aarch64-apple-darwin"
 BINARIES = ROOT / "apps" / "desktop" / "src-tauri" / "binaries"
+DEV_LAUNCHER = ROOT / "apps" / "desktop" / "src-tauri" / "target" / "debug" / "core"
 SCHEMA = json.loads((ROOT / "contracts" / "ipc.schema.json").read_text("utf-8"))
 TIMEOUT = 180  # the first run of a freshly copied onedir can take about 12 s (ADR 0001)
 
@@ -52,10 +58,29 @@ def check(condition: bool, what: str) -> None:
     print(f"ok: {what}")
 
 
+def smoke_dev(launcher: Path) -> None:
+    """The dev launcher (``tauri dev``) starts outside a bundle and answers per contract."""
+    check(launcher.is_file(), f"dev launcher exists: {launcher} (run `cargo build` in src-tauri)")
+    result = run(launcher, stdin=b"not json\n")
+    messages = [json.loads(line) for line in result.stdout.splitlines()]
+    check(
+        result.returncode == 0
+        and bool(messages)
+        and all(Draft202012Validator(SCHEMA).is_valid(m) for m in messages)
+        and [(m["id"], m["code"]) for m in messages] == [(None, "invalid_request")],
+        f"dev launcher answers an invalid request per contract (stderr: {result.stderr[-300:]!r})",
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--binaries", type=Path, default=BINARIES)
-    src = parser.parse_args().binaries
+    parser.add_argument("--dev", nargs="?", type=Path, const=DEV_LAUNCHER, default=None)
+    args = parser.parse_args()
+    if args.dev is not None:
+        smoke_dev(args.dev.resolve())
+        return 0
+    src = args.binaries
     with tempfile.TemporaryDirectory() as tmp:
         contents = Path(tmp) / "smoke.app" / "Contents"
         (contents / "MacOS").mkdir(parents=True)

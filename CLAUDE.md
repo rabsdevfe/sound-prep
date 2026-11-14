@@ -18,7 +18,7 @@ npm ci
 npm run check:ipc                      # fails when generated IPC files are stale
 npm run generate:ipc                   # regenerate them from contracts/ipc.schema.json
 npm run lint && npm run typecheck && npm test && npm run build
-npm run tauri dev                      # run the app
+npm run tauri dev                      # run the app (build the sidecar first, see Core; build.rs lays out its code beside target/debug/core)
 (cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)
 ```
 
@@ -32,6 +32,7 @@ uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 uv run python -m sound_prep_core       # sidecar: JSON Lines on stdin/stdout; takes no argv; ffmpeg: SOUND_PREP_FFMPEG=/abs/path or Homebrew defaults (never PATH)
 uv run python packaging/build_sidecar.py   # freeze the sidecar (macOS arm64) into apps/desktop/src-tauri/binaries/ (gitignored)
 uv run python packaging/smoke_sidecar.py   # smoke test of the frozen binary in the bundle layout
+uv run python packaging/smoke_sidecar.py --dev   # the launcher `tauri dev` runs (after `cargo build` in src-tauri)
 ```
 
 ## Architecture rules
