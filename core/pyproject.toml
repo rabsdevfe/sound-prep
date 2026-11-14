@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "certifi>=2026.10.23",
     "pydantic>=2.14.3",
+    "yt-dlp>=2026.10.26",
 ]
 
 [build-system]
@@ -23,6 +25,7 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.5",
     "types-jsonschema>=4.26.0.20261006",
+    "types-yt-dlp>=2026.8.19.20261030",
 ]
 
 [tool.ruff]
@@ -38,4 +41,5 @@ files = ["src", "tests", "packaging"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers"]
+addopts = ["--strict-markers", "-m", "not network"]
+markers = ["network: real network access (opt in with: pytest -m network)"]
