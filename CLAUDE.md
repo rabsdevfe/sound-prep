@@ -29,6 +29,7 @@ Python version comes from `core/.python-version`; `uv` installs it when missing.
 ```bash
 uv sync
 uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
+uv run python -m sound_prep_core       # sidecar: JSON Lines on stdin/stdout; takes no argv
 ```
 
 ## Architecture rules
