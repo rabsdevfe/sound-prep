@@ -71,6 +71,10 @@
     "keyword": "type",
     "path": "/id"
   },
+  "progress_null_percent.json": {
+    "keyword": "type",
+    "path": "/percent"
+  },
   "relative_output_dir.json": {
     "keyword": "pattern",
     "path": "/params/output_dir"
