@@ -39,6 +39,14 @@ async function fillValid() {
 }
 
 describe("PrepareClipContainer validation", () => {
+  it("shows the time format hint under the start and end fields", () => {
+    setup();
+    const hint = screen.getByText(/Times as 1:30/);
+    expect(screen.getByLabelText("Start")).toHaveAccessibleDescription(hint.textContent!);
+    expect(screen.getByLabelText("End")).toHaveAccessibleDescription(hint.textContent!);
+    expect(screen.getByLabelText("Title")).not.toHaveAccessibleDescription(hint.textContent!);
+  });
+
   it("starts with submit enabled and no errors shown", () => {
     setup();
     expect(submit()).toBeEnabled();
@@ -96,7 +104,7 @@ describe("PrepareClipContainer validation", () => {
     setup();
     type("Start", start);
     type("End", end);
-    expect(screen.getByLabelText("End")).toHaveAccessibleDescription("End must be after start.");
+    expect(screen.getByLabelText("End")).toHaveAccessibleDescription(/^End must be after start\./);
   });
 
   it("compares times numerically, not as text", () => {

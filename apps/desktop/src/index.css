@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /*
+ * Contrast (WCAG 2.x, measured; text needs 4.5:1). Light: ink/canvas 15.5, muted/canvas 5.5,
+ * muted/surface 6.0, accent-ink/accent 5.7, danger/surface 5.8, danger on its 10% tint 4.5,
+ * success on its 10% tint 5.2, muted on the success tint 4.8. Dark: ink/surface 13.2,
+ * muted/surface 5.6, accent-ink/accent 5.5 (dark ink on the lighter blue), danger/surface 5.1,
+ * danger on its tint 5.1, success on its tint 7.1. Non-text accent (focus ring, progress fill)
+ * is at least 4.3:1 against surface in both themes.
+ *
+ * Keep the danger tint on the canvas, never on a surface: in dark mode danger text on a
+ * surface-based tint drops to 4.44:1 and fails.
+ *
  * Design foundation. Semantic color tokens switch with the system appearance
  * (prefers-color-scheme); components use them as utilities, e.g. bg-surface,
  * text-muted, border-line, bg-accent.
@@ -26,12 +36,12 @@
   --canvas: #f5f5f7;
   --surface: #ffffff;
   --ink: #1d1d1f;
-  --muted: #6e6e73;
+  --muted: #636366;
   --line: #d2d2d7;
   --accent: #0a60d6;
   --accent-ink: #ffffff;
   --danger: #c4251b;
-  --success: #1f7a3a;
+  --success: #1a6b33;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,7 +52,7 @@
     --muted: #a1a1a6;
     --line: #48484a;
     --accent: #3d8bfd;
-    --accent-ink: #ffffff;
+    --accent-ink: #06142a;
     --danger: #ff6961;
     --success: #4cd27a;
   }

@@ -42,8 +42,8 @@ function isEngineErrorCode(code: ErrorCode | EngineErrorCode): code is EngineErr
 }
 
 /** Shown (and announced) when the first start is slow; ADR 0001 measured about 12 s. */
-export const SLOW_START_MESSAGE =
-  "Starting the audio engine. The first start after an install can take about 12 seconds.";
+export const SLOW_START_HINT = "The first start after an install can take about 12 seconds.";
+export const SLOW_START_MESSAGE = `Starting the audio engine. ${SLOW_START_HINT}`;
 
 /** How long "starting" lasts before the slow-start message appears, so warm starts never flash it. */
 export const SLOW_START_DELAY_MS = 2000;
