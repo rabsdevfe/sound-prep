@@ -1,4 +1,4 @@
-import { ERROR_MESSAGES, SLOW_START_MESSAGE, type JobState } from "./jobState";
+import { errorMessage, SLOW_START_MESSAGE, type JobState } from "./jobState";
 
 const STAGE_LABEL = {
   starting: "Starting",
@@ -31,6 +31,6 @@ export function JobStatus({ state }: { state: JobState }) {
         </dl>
       );
     case "error":
-      return <p role="alert">{ERROR_MESSAGES[state.code]}</p>;
+      return <p role="alert">{errorMessage(state.code)}</p>;
   }
 }

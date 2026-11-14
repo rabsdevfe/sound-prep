@@ -6,7 +6,7 @@ import type {
   PrepareClipRequest,
   ProgressEvent,
 } from "../../ipc/types.generated";
-import type { CoreClient, JobOutcome } from "./coreClient";
+import type { CoreClient, EngineUnavailable, JobOutcome } from "./coreClient";
 
 /** Name of the sidecar as declared in `bundle.externalBin` and in the capability. */
 export const SIDECAR_NAME = "binaries/core";
@@ -62,6 +62,11 @@ interface Session {
    * so a reused id can never receive the old job's late messages.
    */
   owed: Set<string>;
+  /**
+   * True once the core sent any valid message: from then on an exit is a crash, not a failed
+   * start.
+   */
+  answered: boolean;
 }
 
 const failure = (id: string, code: ErrorCode, message: string): ErrorMessage => ({
@@ -71,6 +76,12 @@ const failure = (id: string, code: ErrorCode, message: string): ErrorMessage => 
   code,
   message,
 });
+
+const engineUnavailable = (
+  id: string,
+  reason: EngineUnavailable["reason"],
+  message: string,
+): EngineUnavailable => ({ type: "engine_unavailable", id, reason, message });
 
 const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -82,8 +93,9 @@ const describe = (error: unknown) => (error instanceof Error ? error.message : S
  * - Aborting rejects the caller's promise and stops its events. The contract has no cancel
  *   message and the capability grants no kill, so the core finishes the job and its late
  *   messages are discarded.
- * - A sidecar that fails to start, exits, or reports an uncorrelated error ends the affected
- *   jobs with an `internal_error` outcome; the next job spawns a fresh process.
+ * - A sidecar that fails to start, exits, or reports an uncorrelated error ends the
+ *   affected jobs with an `engine_unavailable` outcome (reason `start_failed` if it never
+ *   answered, `stopped` after it did); other failures end them with `internal_error`; the next job spawns a fresh process.
  * - There is deliberately no spawn timeout: the first launch after an install can take ~12 s.
  */
 export function createSidecarCoreClient({
@@ -92,11 +104,16 @@ export function createSidecarCoreClient({
   let starting: Promise<Session> | null = null;
   let active: Session | null = null;
 
-  const failAll = (session: Session, message: string) => {
+  const failAll = (session: Session, message: string, exited = false) => {
     session.owed.clear();
+    const reason = session.answered ? "stopped" : "start_failed";
     for (const [id, job] of [...session.jobs]) {
       session.jobs.delete(id);
-      job.settle(failure(id, "internal_error", message));
+      job.settle(
+        exited
+          ? engineUnavailable(id, reason, message)
+          : failure(id, "internal_error", message),
+      );
     }
   };
 
@@ -109,6 +126,7 @@ export function createSidecarCoreClient({
     }
     const message = parsed.message;
     if (message.type === "prepare_clip") return; // wrong direction
+    session.answered = true;
     if (message.type === "error" && message.id === null) {
       // The core could not tell which request failed: nothing can be correlated anymore.
       failAll(session, `Core error: ${message.message}`);
@@ -150,7 +168,7 @@ export function createSidecarCoreClient({
             closedEarly = true;
             return;
           }
-          failAll(session, "The core process ended unexpectedly.");
+          failAll(session, "The core process ended unexpectedly.", true);
           if (active === session) {
             active = null;
             starting = null;
@@ -158,7 +176,7 @@ export function createSidecarCoreClient({
         },
       });
       if (closedEarly) throw new Error("the core process exited during startup");
-      session = { process, jobs, owed: new Set() };
+      session = { process, jobs, owed: new Set(), answered: false };
       active = session;
       return session;
     })();
@@ -219,7 +237,7 @@ export function createSidecarCoreClient({
           (error: unknown) =>
             finish(() =>
               resolve(
-                failure(id, "internal_error", `Could not start the core: ${describe(error)}`),
+                engineUnavailable(id, "start_failed", `Could not start the core: ${describe(error)}`),
               ),
             ),
         );

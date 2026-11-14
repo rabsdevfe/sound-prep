@@ -102,6 +102,12 @@ export function PrepareClipContainer({ picker, store, client }: PrepareClipConta
       activeRun.current = null;
       if (outcome.id !== null && outcome.id !== current.id) {
         setJob({ status: "error", code: "internal_error" });
+      } else if (outcome.type === "engine_unavailable") {
+        setDirUnavailable(false);
+        setJob({
+          status: "error",
+          code: outcome.reason === "stopped" ? "engine_stopped" : "engine_start_failed",
+        });
       } else if (outcome.type === "result") {
         setJob({ status: "success", result: outcome });
       } else {

@@ -5,7 +5,10 @@ export type JobState =
   // "starting" is a UI-only state (request sent, no event yet); it is not part of the IPC contract.
   | { status: "running"; stage: "downloading" | "cutting" | "starting"; percent?: number; slow?: boolean }
   | { status: "success"; result: ResultMessage }
-  | { status: "error"; code: ErrorCode };
+  | { status: "error"; code: ErrorCode | EngineErrorCode };
+
+/** UI-only error kinds for the audio engine; they are not part of the IPC contract. */
+export type EngineErrorCode = "engine_start_failed" | "engine_stopped";
 
 /** Human message per core error code. */
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
@@ -20,6 +23,23 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   cut_failed: "The clip could not be cut from the track. Check the start and end times.",
   internal_error: "Something went wrong inside the app. Try again.",
 };
+
+/** Message per UI-only engine error kind. */
+export const ENGINE_MESSAGES: Record<EngineErrorCode, string> = {
+  engine_start_failed:
+    "The audio engine could not start. Restart the app and try again; if it keeps happening, reinstall the app.",
+  engine_stopped:
+    "The audio engine stopped unexpectedly. Try again; if it keeps happening, restart the app.",
+};
+
+/** Human message for any error state, including the UI-only engine failures. */
+export function errorMessage(code: ErrorCode | EngineErrorCode): string {
+  return isEngineErrorCode(code) ? ENGINE_MESSAGES[code] : ERROR_MESSAGES[code];
+}
+
+function isEngineErrorCode(code: ErrorCode | EngineErrorCode): code is EngineErrorCode {
+  return code === "engine_start_failed" || code === "engine_stopped";
+}
 
 /** Shown (and announced) when the first start is slow; ADR 0001 measured about 12 s. */
 export const SLOW_START_MESSAGE =

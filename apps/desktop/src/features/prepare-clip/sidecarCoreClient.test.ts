@@ -216,7 +216,11 @@ describe("createSidecarCoreClient", () => {
     const h = harness();
     h.state.failSpawn = new Error("denied");
     const outcome = await h.client.prepareClip(request("a"), vi.fn(), new AbortController().signal);
-    expect(outcome).toMatchObject({ id: "a", type: "error", code: "internal_error" });
+    expect(outcome).toMatchObject({
+      id: "a",
+      type: "engine_unavailable",
+      reason: "start_failed",
+    });
     expect((outcome as { message: string }).message).toContain("denied");
     h.state.failSpawn = null;
     const job = h.client.prepareClip(request("b"), vi.fn(), new AbortController().signal);
@@ -232,8 +236,16 @@ describe("createSidecarCoreClient", () => {
     const b = h.client.prepareClip(request("b"), vi.fn(), new AbortController().signal);
     await tick();
     h.last().onClose();
-    await expect(a).resolves.toMatchObject({ id: "a", type: "error", code: "internal_error" });
-    await expect(b).resolves.toMatchObject({ id: "b", type: "error", code: "internal_error" });
+    await expect(a).resolves.toMatchObject({
+      id: "a",
+      type: "engine_unavailable",
+      reason: "start_failed",
+    });
+    await expect(b).resolves.toMatchObject({
+      id: "b",
+      type: "engine_unavailable",
+      reason: "start_failed",
+    });
     const c = h.client.prepareClip(request("c"), vi.fn(), new AbortController().signal);
     await tick();
     expect(h.spawn).toHaveBeenCalledTimes(2);
@@ -264,6 +276,32 @@ describe("createSidecarCoreClient", () => {
     await tick();
     h.last().onClose();
     release();
+    await expect(job).resolves.toMatchObject({
+      id: "a",
+      type: "engine_unavailable",
+      reason: "start_failed",
+    });
+  });
+
+  it("reports a crash after the core already sent progress as stopped, not as a failed start", async () => {
+    const h = harness();
+    const job = h.client.prepareClip(request("a"), vi.fn(), new AbortController().signal);
+    await tick();
+    h.last().onStdout(line(progress("a")));
+    h.last().onClose();
+    await expect(job).resolves.toMatchObject({
+      id: "a",
+      type: "engine_unavailable",
+      reason: "stopped",
+    });
+  });
+
+  it("keeps a null-id core error after the core answered as internal_error, not stopped", async () => {
+    const h = harness();
+    const job = h.client.prepareClip(request("a"), vi.fn(), new AbortController().signal);
+    await tick();
+    h.last().onStdout(line(progress("a")));
+    h.last().onStdout(line(coreError(null)));
     await expect(job).resolves.toMatchObject({ id: "a", type: "error", code: "internal_error" });
   });
 
