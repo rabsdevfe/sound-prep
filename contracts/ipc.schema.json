@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rabsdevfe/sound-prep/contracts/ipc.schema.json",
+  "title": "sound-prep IPC message",
+  "description": "Contract v1 between the UI and the core. One JSON object per line over stdio. Directions: prepare_clip is UI -> core; progress, result and error are core -> UI. For each request the core sends zero or more progress events (0..n), then exactly one result or error, all echoing the request id. Paths are macOS/POSIX only (absolute means starting with '/'). To add a command: add a $def, add its name to properties.type.enum and add one if/then branch to allOf.",
+  "type": "object",
+  "required": [
+    "type"
+  ],
+  "properties": {
+    "type": {
+      "enum": [
+        "prepare_clip",
+        "progress",
+        "result",
+        "error"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "prepare_clip"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/PrepareClipRequest"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "progress"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/ProgressEvent"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "result"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/ResultMessage"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "error"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/ErrorMessage"
+      }
+    }
+  ],
+  "$defs": {
+    "Version": {
+      "const": 1
+    },
+    "MessageId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "AbsolutePath": {
+      "description": "POSIX absolute path; control characters and line separators are rejected.",
+      "type": "string",
+      "pattern": "^/[^\\x00-\\x1f\\x7f-\\x9f\\u2028\\u2029]*(?![\\s\\S])"
+    },
+    "ClipTime": {
+      "description": "SS, MM:SS or HH:MM:SS. Minutes and seconds are 00-59 unless they are the leading field. Ordering of start and end is domain logic.",
+      "type": "string",
+      "pattern": "^(?:[0-9]+|[0-9]+:[0-5][0-9]|[0-9]+:[0-5][0-9]:[0-5][0-9])(?![\\s\\S])"
+    },
+    "ErrorCode": {
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "invalid_url",
+        "invalid_time_range",
+        "invalid_title",
+        "output_dir_unavailable",
+        "download_failed",
+        "cut_failed",
+        "internal_error"
+      ]
+    },
+    "PrepareClipRequest": {
+      "description": "UI -> core: download a track and cut a clip.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "id",
+        "type",
+        "params"
+      ],
+      "properties": {
+        "v": {
+          "$ref": "#/$defs/Version"
+        },
+        "id": {
+          "$ref": "#/$defs/MessageId"
+        },
+        "type": {
+          "const": "prepare_clip"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "url",
+            "title",
+            "output_dir",
+            "start",
+            "end"
+          ],
+          "properties": {
+            "url": {
+              "description": "http or https URL with a host; no whitespace or control characters (explicit class, identical in Python and ECMAScript).",
+              "type": "string",
+              "pattern": "^https?://[^\\x00-\\x20\\x7f-\\x9f\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff/?#]+[^\\x00-\\x20\\x7f-\\x9f\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]*(?![\\s\\S])"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "output_dir": {
+              "$ref": "#/$defs/AbsolutePath"
+            },
+            "start": {
+              "$ref": "#/$defs/ClipTime"
+            },
+            "end": {
+              "$ref": "#/$defs/ClipTime"
+            }
+          }
+        }
+      }
+    },
+    "ProgressEvent": {
+      "description": "core -> UI: zero or more per request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "id",
+        "type",
+        "stage"
+      ],
+      "properties": {
+        "v": {
+          "$ref": "#/$defs/Version"
+        },
+        "id": {
+          "$ref": "#/$defs/MessageId"
+        },
+        "type": {
+          "const": "progress"
+        },
+        "stage": {
+          "enum": [
+            "downloading",
+            "cutting"
+          ]
+        },
+        "percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "ResultMessage": {
+      "description": "core -> UI: successful completion.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "id",
+        "type",
+        "folder",
+        "full_track",
+        "clip"
+      ],
+      "properties": {
+        "v": {
+          "$ref": "#/$defs/Version"
+        },
+        "id": {
+          "$ref": "#/$defs/MessageId"
+        },
+        "type": {
+          "const": "result"
+        },
+        "folder": {
+          "$ref": "#/$defs/AbsolutePath"
+        },
+        "full_track": {
+          "$ref": "#/$defs/AbsolutePath"
+        },
+        "clip": {
+          "$ref": "#/$defs/AbsolutePath"
+        }
+      }
+    },
+    "ErrorMessage": {
+      "description": "core -> UI: failure.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "v",
+        "id",
+        "type",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "v": {
+          "$ref": "#/$defs/Version"
+        },
+        "id": {
+          "description": "Echoes the request id; null only when the id could not be read (unparseable input, missing or invalid id).",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "const": "error"
+        },
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "$ref": "#/$defs/NonEmptyString"
+        }
+      }
+    }
+  }
+}

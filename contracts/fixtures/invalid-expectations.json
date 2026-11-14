@@ -1,0 +1,130 @@
+{
+  "bad_stage.json": {
+    "keyword": "enum",
+    "path": "/stage"
+  },
+  "bad_time_format.json": {
+    "keyword": "pattern",
+    "path": "/params/start"
+  },
+  "bad_time_not_numeric.json": {
+    "keyword": "pattern",
+    "path": "/params/end"
+  },
+  "bad_time_seconds_out_of_range.json": {
+    "keyword": "pattern",
+    "path": "/params/start"
+  },
+  "bad_version.json": {
+    "keyword": "const",
+    "path": "/v"
+  },
+  "empty_error_message.json": {
+    "keyword": "minLength",
+    "path": "/message"
+  },
+  "empty_id.json": {
+    "keyword": "minLength",
+    "path": "/id"
+  },
+  "empty_title.json": {
+    "keyword": "minLength",
+    "path": "/params/title"
+  },
+  "extra_field.json": {
+    "keyword": "additionalProperties",
+    "path": ""
+  },
+  "extra_param_field.json": {
+    "keyword": "additionalProperties",
+    "path": "/params"
+  },
+  "id_too_long.json": {
+    "keyword": "maxLength",
+    "path": "/id"
+  },
+  "missing_end.json": {
+    "keyword": "required",
+    "path": "/params"
+  },
+  "missing_id.json": {
+    "keyword": "required",
+    "path": ""
+  },
+  "non_http_url.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "not_a_url.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "percent_above_range.json": {
+    "keyword": "maximum",
+    "path": "/percent"
+  },
+  "percent_below_range.json": {
+    "keyword": "minimum",
+    "path": "/percent"
+  },
+  "progress_null_id.json": {
+    "keyword": "type",
+    "path": "/id"
+  },
+  "relative_output_dir.json": {
+    "keyword": "pattern",
+    "path": "/params/output_dir"
+  },
+  "relative_path.json": {
+    "keyword": "pattern",
+    "path": "/folder"
+  },
+  "result_missing_clip.json": {
+    "keyword": "required",
+    "path": ""
+  },
+  "title_too_long.json": {
+    "keyword": "maxLength",
+    "path": "/params/title"
+  },
+  "trailing_newline_path.json": {
+    "keyword": "pattern",
+    "path": "/folder"
+  },
+  "trailing_newline_time.json": {
+    "keyword": "pattern",
+    "path": "/params/start"
+  },
+  "trailing_newline_url.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "unknown_error_code.json": {
+    "keyword": "enum",
+    "path": "/code"
+  },
+  "unknown_type.json": {
+    "keyword": "enum",
+    "path": "/type"
+  },
+  "url_with_bom.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "url_with_control_char.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "url_with_nbsp.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "url_with_space.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  },
+  "url_without_host.json": {
+    "keyword": "pattern",
+    "path": "/params/url"
+  }
+}
