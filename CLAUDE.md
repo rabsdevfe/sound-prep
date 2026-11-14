@@ -29,7 +29,7 @@ Python version comes from `core/.python-version`; `uv` installs it when missing.
 ```bash
 uv sync
 uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
-uv run python -m sound_prep_core       # sidecar: JSON Lines on stdin/stdout; takes no argv
+uv run python -m sound_prep_core       # sidecar: JSON Lines on stdin/stdout; takes no argv; ffmpeg: SOUND_PREP_FFMPEG=/abs/path or Homebrew defaults (never PATH)
 uv run python packaging/build_sidecar.py   # freeze the sidecar (macOS arm64) into apps/desktop/src-tauri/binaries/ (gitignored)
 uv run python packaging/smoke_sidecar.py   # smoke test of the frozen binary in the bundle layout
 ```

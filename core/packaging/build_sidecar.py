@@ -192,6 +192,13 @@ def assemble(onedir: Path, out: Path) -> None:
             continue
         shutil.move(entry, res / entry.name)
         entry.symlink_to(f"../Resources/pyi/{entry.name}")
+    # Like the other symlinks into ../Resources/pyi, these only resolve inside the bundle mapping
+    # (fw -> Contents/Frameworks, res -> Contents/Resources/pyi); they dangle in this output dir.
+    # Extension modules in res/python3.X/lib-dynload find their dylibs through @rpath, which
+    # resolves (through the symlink) to Resources/pyi/: link the Frameworks dylibs there.
+    for dylib in sorted(fw.glob("*.dylib")):
+        if not dylib.is_symlink():
+            (res / dylib.name).symlink_to(f"../../Frameworks/{dylib.name}")
     # codesign rejects loose data next to code, and each Mach-O must be signed before bundling.
     for binary in [*res.rglob("*.so"), *fw.rglob("*.dylib"), *fw.rglob("*.so")]:
         if not binary.is_symlink():
