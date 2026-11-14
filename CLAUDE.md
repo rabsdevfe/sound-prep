@@ -5,7 +5,7 @@ macOS desktop app that turns a YouTube URL, a title, an output directory and a t
 ## Stack
 
 - `apps/desktop/`: Tauri 2 shell (Rust) with a React + TypeScript UI.
-- `core/` (planned): Python core, shipped to the app as a sidecar binary.
+- `core/`: Python core managed with `uv`; it will ship to the app as a sidecar binary.
 
 ## Commands
 
@@ -18,6 +18,15 @@ npm ci
 npm run lint && npm run typecheck && npm test && npm run build
 npm run tauri dev                      # run the app
 (cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)
+```
+
+### Core (`core/`)
+
+Python version comes from `core/.python-version`; `uv` installs it when missing.
+
+```bash
+uv sync
+uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 ```
 
 ## Architecture rules
