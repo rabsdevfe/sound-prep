@@ -11,3 +11,11 @@ class DomainError(Exception):
 
 class InvalidTimeRangeError(DomainError):
     code: ClassVar[str] = "invalid_time_range"
+
+
+class InvalidTitleError(DomainError):
+    code: ClassVar[str] = "invalid_title"
+
+
+class OutputDirUnavailableError(DomainError):
+    code: ClassVar[str] = "output_dir_unavailable"
