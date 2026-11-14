@@ -42,7 +42,8 @@ uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 2. Run the checks of every package the unit touches. All must pass.
 3. Stage the unit and get a **blind review**: a fresh reviewer with no prior context receives only the commit objective (what and why) and reads `git diff --cached` itself. The objective must not include implementation hints or a list of changed files.
 4. Fix blocking findings, re-run checks, and request one fresh re-review. If blockers remain, stop and ask the repository owner.
-5. Commit with a Conventional Commit message. No AI attribution or `Co-Authored-By` lines, even if a tool adds them by default.
+5. After the review rounds end, record every finding of every round, with its resolution, in `docs/review-log.md` (format described there) and stage it in the same commit. These rows are written after the review, so they are not part of the reviewed diff.
+6. Commit with a Conventional Commit message. No AI attribution or `Co-Authored-By` lines, even if a tool adds them by default.
 
 One PR per phase, at most 400 authored changed lines (lockfiles and generated files excluded); split into chained PRs when larger.
 
