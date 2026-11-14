@@ -17,8 +17,8 @@ dist/
 
 # Rust / Tauri
 target/
-src-tauri/gen/
-src-tauri/binaries/
+**/src-tauri/gen/
+**/src-tauri/binaries/
 
 # Python
 __pycache__/
