@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => {
   const listeners: Record<string, (arg: never) => void> = {};
   const command = {
     stdout: { on: vi.fn((e: string, l: (arg: never) => void) => void (listeners[`stdout:${e}`] = l)) },
+    stderr: { on: vi.fn((e: string, l: (arg: never) => void) => void (listeners[`stderr:${e}`] = l)) },
     on: vi.fn((e: string, l: (arg: never) => void) => void (listeners[e] = l)),
     spawn: vi.fn(async () => child),
   };
@@ -23,6 +24,7 @@ describe("spawnSidecar", () => {
     mocks.listeners["stdout:data"]!("x" as never);
     mocks.listeners["error"]!("e" as never);
     mocks.listeners["close"]!({ code: 1, signal: null } as never);
+    expect(mocks.listeners["stderr:data"]).toBeTypeOf("function"); // drained
     expect(handlers.onStdout).toHaveBeenCalledWith("x");
     expect(handlers.onError).toHaveBeenCalledWith("e");
     expect(handlers.onClose).toHaveBeenCalled();

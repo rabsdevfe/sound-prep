@@ -1,4 +1,4 @@
-import { ERROR_MESSAGES, type JobState } from "./jobState";
+import { ERROR_MESSAGES, SLOW_START_MESSAGE, type JobState } from "./jobState";
 
 const STAGE_LABEL = {
   starting: "Starting",
@@ -14,6 +14,7 @@ export function JobStatus({ state }: { state: JobState }) {
     case "running":
       return (
         <p>
+          {state.stage === "starting" && state.slow && <span>{SLOW_START_MESSAGE} </span>}
           <progress aria-label={STAGE_LABEL[state.stage]} max={100} value={state.percent} />
           {state.percent !== undefined && <span> {Math.round(state.percent)}%</span>}
         </p>

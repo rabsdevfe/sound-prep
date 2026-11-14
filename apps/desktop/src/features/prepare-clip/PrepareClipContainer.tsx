@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CoreClient } from "./coreClient";
 import { JobStatus } from "./JobStatus";
-import { announcement, type JobState } from "./jobState";
+import { announcement, SLOW_START_DELAY_MS, type JobState } from "./jobState";
 import { PrepareClipForm, type PrepareClipFormHandle } from "./PrepareClipForm";
 import type { DirectoryPicker, DirectoryStore } from "./ports";
 import {
@@ -81,6 +81,13 @@ export function PrepareClipContainer({ picker, store, client }: PrepareClipConta
     const isCurrent = () => activeRun.current === current;
     setDirUnavailable(false);
     setJob({ status: "running", stage: "starting" });
+    // Only a run that is still current and still waiting for its first event gets the hint.
+    setTimeout(() => {
+      if (!isCurrent()) return;
+      setJob((prev) =>
+        prev.status === "running" && prev.stage === "starting" ? { ...prev, slow: true } : prev,
+      );
+    }, SLOW_START_DELAY_MS);
     try {
       const outcome = await client.prepareClip(
         request,

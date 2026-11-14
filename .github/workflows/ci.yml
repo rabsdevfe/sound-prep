@@ -49,6 +49,24 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
+      # `bundle.externalBin` needs the frozen sidecar to exist for any Tauri compile step.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: core/uv.lock
+      # Rebuilt only when the core sources, its lockfile, Python version or the build script change.
+      - name: Restore the core sidecar
+        id: sidecar-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/src-tauri/binaries
+          key: sidecar-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('core/uv.lock', 'core/pyproject.toml', 'core/.python-version', 'core/src/**', 'core/packaging/**') }}
+      - name: Build the core sidecar
+        if: steps.sidecar-cache.outputs.cache-hit != 'true'
+        working-directory: core
+        run: |
+          uv sync --locked
+          uv run python packaging/build_sidecar.py
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt

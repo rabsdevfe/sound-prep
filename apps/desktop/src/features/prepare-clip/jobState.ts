@@ -3,7 +3,7 @@ import type { ErrorCode, ResultMessage } from "../../ipc/types.generated";
 export type JobState =
   | { status: "idle" }
   // "starting" is a UI-only state (request sent, no event yet); it is not part of the IPC contract.
-  | { status: "running"; stage: "downloading" | "cutting" | "starting"; percent?: number }
+  | { status: "running"; stage: "downloading" | "cutting" | "starting"; percent?: number; slow?: boolean }
   | { status: "success"; result: ResultMessage }
   | { status: "error"; code: ErrorCode };
 
@@ -21,6 +21,13 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   internal_error: "Something went wrong inside the app. Try again.",
 };
 
+/** Shown (and announced) when the first start is slow; ADR 0001 measured about 12 s. */
+export const SLOW_START_MESSAGE =
+  "Starting the audio engine. The first start after an install can take about 12 seconds.";
+
+/** How long "starting" lasts before the slow-start message appears, so warm starts never flash it. */
+export const SLOW_START_DELAY_MS = 2000;
+
 const STAGE_ANNOUNCEMENT = {
   starting: "Starting…",
   downloading: "Downloading…",
@@ -31,7 +38,7 @@ const STAGE_ANNOUNCEMENT = {
 export function announcement(state: JobState): string {
   switch (state.status) {
     case "running":
-      return STAGE_ANNOUNCEMENT[state.stage];
+      return state.stage === "starting" && state.slow ? SLOW_START_MESSAGE : STAGE_ANNOUNCEMENT[state.stage];
     case "success":
       return "Done. Your files are ready.";
     default:

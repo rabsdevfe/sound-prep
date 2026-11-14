@@ -111,7 +111,7 @@ ffmpeg: option B (configured absolute path with fixed-candidate discovery); do n
 - Confirm the first-load mechanism (privileged trace) and whether fewer modules (`--exclude-module`, only the needed yt-dlp extractors) shrink the cost.
 - Developer ID signing and notarization of the onedir layout; quarantined install behavior.
 - Why `"args": false` is not enforced for sidecars (plugin bug, wrong syntax or version issue); until known, rely on the argv-rejection gate.
-- Which signed binaries carry `disable-library-validation` (the single entitlements file may apply to every signed binary, including the main app hosting the webview) and whether the main app can be signed without it.
+- Which signed binaries carry `disable-library-validation`: ANSWERED (wiring PR, verified on a release build with `codesign -d --entitlements -`). The single `bundle.macOS.entitlements` file puts it on BOTH the main `sound-prep` binary (which hosts the webview) and the `core` sidecar. This is accepted for local ad-hoc builds only. Before Developer ID signing and notarization it must be resolved so the main app does not carry it, for example by signing the main binary without the entitlement (the sidecar needs it, the main app does not appear to). Release signing is also not configured by `tauri.conf.json`: `bundle.macOS.signingIdentity: "-"` (ad hoc) is overridden by the `APPLE_SIGNING_IDENTITY` environment variable, which is how a Developer ID identity is supplied (JSON cannot hold a comment, so this is recorded here).
 - Behavior of `cmd.on("close")` when the core crashes; Intel and universal builds.
 - Static LGPL ffmpeg build, if bundling is ever required, after legal review.
 
