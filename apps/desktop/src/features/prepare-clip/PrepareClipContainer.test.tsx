@@ -1,12 +1,20 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { PrepareClipContainer } from "./PrepareClipContainer";
+import type { DirectoryPicker, DirectoryStore } from "./ports";
 
-function setup(chosen: string | null = "/Users/me/Music") {
+function fakeStore(initial: string | null = null): DirectoryStore & { saved: string[] } {
+  const saved: string[] = [];
+  return { saved, load: () => initial, save: (dir) => void saved.push(dir) };
+}
+
+function setup(chosen: string | null = "/Users/me/Music", remembered: string | null = null) {
   const onSubmit = vi.fn();
-  const chooseDirectory = vi.fn().mockResolvedValue(chosen);
-  render(<PrepareClipContainer chooseDirectory={chooseDirectory} onSubmit={onSubmit} />);
-  return { onSubmit, chooseDirectory };
+  const pick = vi.fn().mockResolvedValue(chosen);
+  const picker: DirectoryPicker = { pick };
+  const store = fakeStore(remembered);
+  render(<PrepareClipContainer picker={picker} store={store} onSubmit={onSubmit} />);
+  return { onSubmit, pick, store };
 }
 
 const type = (label: string, value: string) => {
@@ -73,9 +81,9 @@ describe("PrepareClipContainer validation", () => {
   });
 
   it("asks for a directory once Choose was used and cancelled", async () => {
-    const { chooseDirectory } = setup(null);
+    const { pick } = setup(null);
     fireEvent.click(screen.getByRole("button", { name: "Choose…" }));
-    await waitFor(() => expect(chooseDirectory).toHaveBeenCalled());
+    await waitFor(() => expect(pick).toHaveBeenCalled());
     expect(await screen.findByText("Choose an output directory.")).toBeInTheDocument();
   });
 
@@ -129,5 +137,47 @@ describe("PrepareClipContainer submit", () => {
     const { onSubmit } = setup();
     fireEvent.submit(submit().closest("form")!);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe("PrepareClipContainer output directory", () => {
+  const choose = () => fireEvent.click(screen.getByRole("button", { name: "Choose…" }));
+
+  it("shows and remembers the picked directory", async () => {
+    const { store } = setup("/Volumes/Audio");
+    choose();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Output directory")).toHaveValue("/Volumes/Audio"),
+    );
+    expect(store.saved).toEqual(["/Volumes/Audio"]);
+  });
+
+  it("keeps the current directory and saves nothing when the picker is cancelled", async () => {
+    const { pick, store } = setup(null, "/Users/me/Music");
+    choose();
+    await waitFor(() => expect(pick).toHaveBeenCalled());
+    expect(screen.getByLabelText("Output directory")).toHaveValue("/Users/me/Music");
+    expect(store.saved).toEqual([]);
+  });
+
+  it("starts with the remembered directory", () => {
+    setup("/x", "/Users/me/Music");
+    expect(screen.getByLabelText("Output directory")).toHaveValue("/Users/me/Music");
+  });
+
+  it("starts empty when nothing is remembered", () => {
+    setup();
+    expect(screen.getByLabelText("Output directory")).toHaveValue("");
+  });
+
+  it("reports a rejected picker and recovers on the next attempt", async () => {
+    const pick = vi.fn().mockRejectedValueOnce(new Error("boom")).mockResolvedValue("/ok");
+    const store = fakeStore();
+    render(<PrepareClipContainer picker={{ pick }} store={store} onSubmit={vi.fn()} />);
+    choose();
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Could not open the folder picker/);
+    choose();
+    await waitFor(() => expect(screen.getByLabelText("Output directory")).toHaveValue("/ok"));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
