@@ -68,6 +68,32 @@ describe("prepare-clip job states", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("explains a slow first start until the first event arrives, then hides the hint", () => {
+    vi.useFakeTimers();
+    const core = manualClient();
+    renderScreen(core.client);
+    expect(screen.queryByText(/about 12 seconds/)).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1999));
+    expect(screen.queryByText(/about 12 seconds/)).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.getByRole("status")).toHaveTextContent(/about 12 seconds/);
+    expect(screen.getAllByText(/about 12 seconds/)).toHaveLength(2); // live region + visible hint
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("progressbar", { name: "Starting" })).toBeInTheDocument();
+    act(() => core.progress({ percent: 5 }));
+    expect(screen.queryByText(/about 12 seconds/)).not.toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Downloading" })).toBeInTheDocument();
+  });
+
+  it("never shows the slow-start hint when the first event arrives quickly", () => {
+    vi.useFakeTimers();
+    const core = manualClient();
+    renderScreen(core.client);
+    act(() => core.progress({ percent: 1 }));
+    act(() => vi.advanceTimersByTime(5000));
+    expect(screen.queryByText(/about 12 seconds/)).not.toBeInTheDocument();
+  });
+
   it("shows running stage and percent, then success with the output paths", async () => {
     const core = manualClient();
     renderScreen(core.client);

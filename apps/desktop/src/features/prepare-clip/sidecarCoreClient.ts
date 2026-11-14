@@ -37,6 +37,8 @@ export type SpawnSidecar = (handlers: SidecarHandlers) => Promise<SidecarProcess
 export const spawnSidecar: SpawnSidecar = async ({ onStdout, onError, onClose }) => {
   const command = Command.sidecar(SIDECAR_NAME);
   command.stdout.on("data", onStdout);
+  // Drain stderr so the pipe can never fill and block the core. Its content is not used.
+  command.stderr.on("data", () => {});
   command.on("error", onError);
   command.on("close", onClose);
   const child = await command.spawn();
