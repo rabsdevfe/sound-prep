@@ -11,7 +11,7 @@ macOS desktop app that turns a YouTube URL, a title, an output directory and a t
 
 ### Desktop (`apps/desktop/`)
 
-Use the Node version in `.nvmrc` (`nvm use`).
+Use the Node version in `.nvmrc` (`nvm use`). Supported range is set in `package.json` `engines` and enforced on install (`engine-strict`); keep it aligned with the lockfile's dependency engines.
 
 ```bash
 npm ci
