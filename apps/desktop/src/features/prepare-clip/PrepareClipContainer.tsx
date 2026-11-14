@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PrepareClipRequest } from "../../ipc/types.generated";
 import { PrepareClipForm } from "./PrepareClipForm";
+import type { DirectoryPicker, DirectoryStore } from "./ports";
 import {
   buildRequest,
   EMPTY_VALUES,
@@ -11,13 +12,17 @@ import {
 } from "./formValidation";
 
 export interface PrepareClipContainerProps {
-  /** Resolves to the chosen absolute directory, or null when the user cancels. */
-  chooseDirectory: () => Promise<string | null>;
+  picker: DirectoryPicker;
+  store: DirectoryStore;
   onSubmit: (request: PrepareClipRequest) => void;
 }
 
-export function PrepareClipContainer({ chooseDirectory, onSubmit }: PrepareClipContainerProps) {
-  const [values, setValues] = useState<FormValues>(EMPTY_VALUES);
+export function PrepareClipContainer({ picker, store, onSubmit }: PrepareClipContainerProps) {
+  const [values, setValues] = useState<FormValues>(() => ({
+    ...EMPTY_VALUES,
+    outputDir: store.load() ?? "",
+  }));
+  const [pickerError, setPickerError] = useState<string | null>(null);
   const [touched, setTouched] = useState<Set<FieldName>>(new Set());
 
   const allErrors = validateForm(values);
@@ -26,11 +31,23 @@ export function PrepareClipContainer({ chooseDirectory, onSubmit }: PrepareClipC
     if (allErrors[field]) visibleErrors[field] = allErrors[field];
   }
 
+  if (pickerError) visibleErrors.outputDir = pickerError;
+
   const touch = (field: FieldName) => setTouched((prev) => new Set(prev).add(field));
 
   const handleChoose = async () => {
-    const dir = await chooseDirectory();
-    if (dir !== null) setValues((prev) => ({ ...prev, outputDir: dir }));
+    let dir: string | null;
+    try {
+      dir = await picker.pick();
+    } catch {
+      setPickerError("Could not open the folder picker. Try again.");
+      return;
+    }
+    setPickerError(null);
+    if (dir !== null) {
+      setValues((prev) => ({ ...prev, outputDir: dir }));
+      store.save(dir);
+    }
     touch("outputDir");
   };
 
