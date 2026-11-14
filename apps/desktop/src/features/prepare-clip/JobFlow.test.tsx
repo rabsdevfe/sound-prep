@@ -245,6 +245,25 @@ describe("prepare-clip job states", () => {
     expect(await screen.findByText(ERROR_MESSAGES.internal_error)).toBeInTheDocument();
   });
 
+  it.each([
+    ["start_failed", /audio engine could not start/i, /stopped unexpectedly/i],
+    ["stopped", /audio engine stopped unexpectedly/i, /could not start/i],
+  ] as const)("shows the %s engine message, never the raw error", async (reason, wanted, other) => {
+    renderScreen({
+      prepareClip: async (request) => ({
+        type: "engine_unavailable",
+        id: request.id,
+        reason,
+        message: "Could not start the core: denied",
+      }),
+    });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(wanted);
+    expect(alert).not.toHaveTextContent(other);
+    expect(alert).not.toHaveTextContent(ERROR_MESSAGES.internal_error);
+    expect(alert).not.toHaveTextContent("denied");
+  });
+
   it("shows a single alert after an error", async () => {
     renderScreen(createFakeCoreClient({ outcome: "output_dir_unavailable", stepDelayMs: 0 }));
     await screen.findByText(ERROR_MESSAGES.output_dir_unavailable);
