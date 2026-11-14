@@ -87,3 +87,9 @@ jobs:
       - name: Rust lint
         working-directory: apps/desktop/src-tauri
         run: cargo clippy --all-targets -- -D warnings
+      # `tauri dev` runs the launcher from target/debug; build.rs lays out its code beside it.
+      - name: Dev sidecar starts outside a bundle
+        working-directory: core
+        run: |
+          uv sync --locked
+          uv run python packaging/smoke_sidecar.py --dev

@@ -14,7 +14,7 @@ Environment: macOS 26.7.1, arm64 (`aarch64-apple-darwin`), Python 3.13.6, PyInst
 
 ### 1. PyInstaller output and `externalBin`
 
-`bundle.externalBin: ["binaries/core"]` requires the file `binaries/core-aarch64-apple-darwin`; Tauri copies it to `Contents/MacOS/core` (suffix stripped). The build fails when the file is missing, so `tauri dev` needs it too.
+`bundle.externalBin: ["binaries/core"]` requires the file `binaries/core-aarch64-apple-darwin`; Tauri copies it to `Contents/MacOS/core` (suffix stripped). The build fails when the file is missing, so `tauri dev` needs it too. `tauri dev` runs the launcher from `target/debug/core`, outside a bundle, where it would look for `_internal/`; `src-tauri/build.rs` therefore rebuilds the bundle mapping beside it for debug builds (`Frameworks/`, `Resources/pyi/`, `_internal -> Frameworks`), so it also survives `cargo clean`.
 
 | Variant | Entry point | Size (dist) | App size | Run times, ms (n) |
 |---|---|---|---|---|
