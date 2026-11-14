@@ -44,7 +44,12 @@ uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 1. Implement one work unit: one purpose, tests included, the repo still works with only this commit applied.
 2. Run the checks of every package the unit touches. All must pass.
 3. Stage the unit and get a **blind review**: a fresh reviewer with no prior context receives only the commit objective (what and why) and reads `git diff --cached` itself. The objective must not include implementation hints or a list of changed files.
-4. Fix blocking findings, re-run checks, and request one fresh re-review. If blockers remain, stop and ask the repository owner.
+4. Fix blocking findings, re-run the checks after any fix, and request one fresh re-review (round 2). If round 2 still requests changes:
+   - Fix every correct blocking finding in scope (a bug, a broken contract, a failing check). A finding is in scope when it concerns code or docs that the staged diff introduces or changes; any such blocker must be fixed.
+   - A finding may stay unfixed only if it is out of scope (it concerns code the diff does not introduce or change, and it belongs to another unit) or you dispute it. A dispute must say why the finding is wrong, citing the code, a test or the contract; "disagree" or "low priority" is not a reason. Log each one in `docs/review-log.md` with Status `declined` or `deferred` and that reason; never dismiss one silently. Unfixed round-2 blockers keep `Severity: blocking` in the log.
+   - Re-run the checks after any fix; once they pass, commit without a third review.
+   - Inform the repository owner afterwards, in the final report of the PR or task, naming the log rows of any unfixed blockers.
+   - Otherwise, stop and ask the owner before committing when a remaining blocker needs a product or security decision that documenting cannot settle, or when you dispute a security or correctness blocker. When in doubt, stop and ask.
 5. After the review rounds end, record every finding of every round, with its resolution, in `docs/review-log.md` (format described there) and stage it in the same commit. These rows are written after the review, so they are not part of the reviewed diff.
 6. Commit with a Conventional Commit message. No AI attribution or `Co-Authored-By` lines, even if a tool adds them by default.
 
