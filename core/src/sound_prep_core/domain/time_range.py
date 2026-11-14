@@ -1,7 +1,11 @@
-"""Clip times and ranges, using the time grammar of the IPC contract (``ClipTime``)."""
+"""Clip times and ranges, using the time grammar of the IPC contract (``ClipTime``).
+
+Out of scope on purpose: constructors do no runtime type checks (inputs are typed and mypy runs in
+strict mode; runtime input arrives through the contract models).
+"""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sound_prep_core.domain.errors import InvalidTimeRangeError
 
@@ -20,22 +24,28 @@ _MAX_TEXT_LENGTH = 32
 class ClipTime:
     """A moment in the track, from 0 up to ``MAX_SECONDS`` (24 hours).
 
-    ``text`` is kept as typed because the clip filename uses it.
+    ``text`` is kept as typed because the clip filename uses it. Construction validates it, so
+    an invalid ``ClipTime`` cannot exist; ``seconds`` is derived.
     """
 
     text: str
-    seconds: int
+    seconds: int = field(init=False)
 
-    @classmethod
-    def parse(cls, text: str) -> "ClipTime":
+    def __post_init__(self) -> None:
+        text = self.text
         if len(text) > _MAX_TEXT_LENGTH or not _CLIP_TIME.fullmatch(text):
             raise InvalidTimeRangeError(f"Invalid time {text!r}: use SS, MM:SS or HH:MM:SS")
         seconds = 0
-        for field in text.split(":"):
-            seconds = seconds * 60 + int(field)
+        for part in text.split(":"):
+            seconds = seconds * 60 + int(part)
         if seconds > MAX_SECONDS:
             raise InvalidTimeRangeError(f"Time {text!r} is beyond the 24 hour limit")
-        return cls(text=text, seconds=seconds)
+        object.__setattr__(self, "seconds", seconds)
+
+    @classmethod
+    def parse(cls, text: str) -> "ClipTime":
+        # Alias of the constructor, kept for call-site clarity and symmetry with TimeRange.parse.
+        return cls(text)
 
 
 @dataclass(frozen=True, slots=True)
