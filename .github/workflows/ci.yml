@@ -25,6 +25,10 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: core/uv.lock
+      # The adapter tests run the real ffmpeg; they must not be skipped in CI.
+      - name: Install ffmpeg
+        working-directory: .
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: uv sync --locked
       - run: uv run ruff check
       - run: uv run ruff format --check
