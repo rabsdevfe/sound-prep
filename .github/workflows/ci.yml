@@ -52,6 +52,8 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri
       - run: npm ci
+      - name: IPC contract files are up to date
+        run: npm run check:ipc
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

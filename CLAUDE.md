@@ -15,6 +15,8 @@ Use the Node version in `.nvmrc` (`nvm use`). Supported range is set in `package
 
 ```bash
 npm ci
+npm run check:ipc                      # fails when generated IPC files are stale
+npm run generate:ipc                   # regenerate them from contracts/ipc.schema.json
 npm run lint && npm run typecheck && npm test && npm run build
 npm run tauri dev                      # run the app
 (cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)
@@ -33,6 +35,7 @@ uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 
 - **Hexagonal core.** Domain and use cases never import adapters or third-party I/O libraries; adapters implement ports.
 - **The IPC contract is the source of truth** between UI and core. Change it in its own PR, together with both sides.
+  After changing `contracts/ipc.schema.json`: run `npm run generate:ipc` in `apps/desktop/` (rewrites `src/ipc/types.generated.ts` and the precompiled `src/ipc/validate.generated.ts`, commit both), then run the tests of both packages. Never hand-edit generated files and never relax the CSP to compile validators at runtime (no `eval`).
 - **UI follows container/presentational.** Presentational components receive data and callbacks only; containers talk to the core client.
 - **Thin Rust layer.** Rust only spawns the core sidecar and forwards messages; no business logic.
 
