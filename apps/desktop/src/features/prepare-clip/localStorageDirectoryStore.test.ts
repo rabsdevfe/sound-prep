@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { createLocalStorageDirectoryStore } from "./localStorageDirectoryStore";
 
 describe("localStorage directory store", () => {
+  afterEach(() => window.localStorage.clear());
+
   it("returns null when nothing was saved", () => {
     expect(createLocalStorageDirectoryStore(window.localStorage).load()).toBeNull();
   });
@@ -9,7 +11,6 @@ describe("localStorage directory store", () => {
   it("remembers a saved directory across store instances", () => {
     createLocalStorageDirectoryStore(window.localStorage).save("/Users/me/Music");
     expect(createLocalStorageDirectoryStore(window.localStorage).load()).toBe("/Users/me/Music");
-    window.localStorage.clear();
   });
 
   it("survives a storage that throws", () => {

@@ -1,10 +1,16 @@
+import { useImperativeHandle, useRef, type Ref } from "react";
 import type { FieldErrors, FieldName, FormValues } from "./formValidation";
 
+export interface PrepareClipFormHandle {
+  focusField: (field: FieldName) => void;
+}
+
 export interface PrepareClipFormProps {
+  handleRef?: Ref<PrepareClipFormHandle>;
   values: FormValues;
   /** Errors to display (already filtered to the fields the user has interacted with). */
   errors: FieldErrors;
-  canSubmit: boolean;
+  submitDisabled: boolean;
   onChange: (field: FieldName, value: string) => void;
   onBlur: (field: FieldName) => void;
   onChooseDirectory: () => void;
@@ -33,19 +39,24 @@ function TextField({ field, label, placeholder, props }: TextFieldProps) {
         onChange={(event) => props.onChange(field, event.target.value)}
         onBlur={() => props.onBlur(field)}
       />
-      {error && (
-        <p id={`${id}-error`} role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p id={`${id}-error`}>{error}</p>}
     </div>
   );
 }
 
 export function PrepareClipForm(props: PrepareClipFormProps) {
+  const formElement = useRef<HTMLFormElement>(null);
+  useImperativeHandle(props.handleRef, () => ({
+    focusField: (field) => {
+      const input = formElement.current?.elements.namedItem(`prepare-clip-${field}`);
+      if (input instanceof HTMLInputElement) input.focus();
+    },
+  }));
+
   const dirError = props.errors.outputDir;
   return (
     <form
+      ref={formElement}
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -72,15 +83,11 @@ export function PrepareClipForm(props: PrepareClipFormProps) {
         <button type="button" onClick={props.onChooseDirectory}>
           Choose…
         </button>
-        {dirError && (
-          <p id="prepare-clip-outputDir-error" role="alert">
-            {dirError}
-          </p>
-        )}
+        {dirError && <p id="prepare-clip-outputDir-error">{dirError}</p>}
       </div>
       <TextField field="start" label="Start" placeholder="0:00" props={props} />
       <TextField field="end" label="End" placeholder="1:30" props={props} />
-      <button type="submit" disabled={!props.canSubmit}>
+      <button type="submit" aria-disabled={props.submitDisabled || undefined}>
         Prepare clip
       </button>
     </form>

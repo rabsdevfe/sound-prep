@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { validateMessage } from "../../ipc/messages";
 import { PrepareClipContainer } from "./PrepareClipContainer";
+import type { CoreClient } from "./coreClient";
 import type { DirectoryPicker, DirectoryStore } from "./ports";
 
 function fakeStore(initial: string | null = null): DirectoryStore & { saved: string[] } {
@@ -9,11 +11,11 @@ function fakeStore(initial: string | null = null): DirectoryStore & { saved: str
 }
 
 function setup(chosen: string | null = "/Users/me/Music", remembered: string | null = null) {
-  const onSubmit = vi.fn();
+  const onSubmit = vi.fn<CoreClient["prepareClip"]>(() => new Promise(() => {}));
   const pick = vi.fn().mockResolvedValue(chosen);
   const picker: DirectoryPicker = { pick };
   const store = fakeStore(remembered);
-  render(<PrepareClipContainer picker={picker} store={store} onSubmit={onSubmit} />);
+  render(<PrepareClipContainer picker={picker} store={store} client={{ prepareClip: onSubmit }} />);
   return { onSubmit, pick, store };
 }
 
@@ -37,9 +39,9 @@ async function fillValid() {
 }
 
 describe("PrepareClipContainer validation", () => {
-  it("starts with submit disabled and no errors shown", () => {
+  it("starts with submit enabled and no errors shown", () => {
     setup();
-    expect(submit()).toBeDisabled();
+    expect(submit()).toBeEnabled();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -106,12 +108,11 @@ describe("PrepareClipContainer validation", () => {
 });
 
 describe("PrepareClipContainer submit", () => {
-  it("enables submit only when every field is valid", async () => {
-    setup();
+  it("submits when every field is valid", async () => {
+    const { onSubmit } = setup();
     await fillValid();
-    expect(submit()).toBeEnabled();
-    type("End", "0:05");
-    expect(submit()).toBeDisabled();
+    fireEvent.click(submit());
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it("submits a contract request with trimmed values", async () => {
@@ -133,10 +134,45 @@ describe("PrepareClipContainer submit", () => {
     });
   });
 
-  it("does not submit an invalid form", () => {
+  it("accepts padded URL and time values and sends them trimmed", async () => {
     const { onSubmit } = setup();
-    fireEvent.submit(submit().closest("form")!);
+    await fillValid();
+    type("YouTube URL", "  https://youtu.be/abc  ");
+    type("Start", " 0:10 ");
+    type("End", " 1:30 ");
+    fireEvent.click(submit());
+    expect(onSubmit.mock.calls[0][0].params).toMatchObject({
+      url: "https://youtu.be/abc",
+      start: "0:10",
+      end: "1:30",
+    });
+  });
+
+  it("sends a fresh contract-valid request id on every submit", async () => {
+    const { onSubmit } = setup();
+    await fillValid();
+    fireEvent.click(submit());
+    expect(validateMessage(onSubmit.mock.calls[0][0]).ok).toBe(true);
+    expect(onSubmit.mock.calls[0][0].id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("does not submit an invalid form, shows every error and focuses the first invalid field", () => {
+    const { onSubmit } = setup();
+    type("Start", "0:10");
+    type("End", "1:30");
+    fireEvent.click(submit());
     expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("YouTube URL")).toBeInvalid();
+    expect(screen.getByLabelText("Title")).toBeInvalid();
+    expect(screen.getByLabelText("Output directory")).toBeInvalid();
+    expect(screen.getByLabelText("YouTube URL")).toHaveFocus();
+  });
+
+  it("rejects a remembered relative directory", () => {
+    const { onSubmit } = setup("/x", "relative/dir");
+    fireEvent.click(submit());
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Output directory")).toBeInvalid();
   });
 });
 
@@ -173,7 +209,9 @@ describe("PrepareClipContainer output directory", () => {
   it("reports a rejected picker and recovers on the next attempt", async () => {
     const pick = vi.fn().mockRejectedValueOnce(new Error("boom")).mockResolvedValue("/ok");
     const store = fakeStore();
-    render(<PrepareClipContainer picker={{ pick }} store={store} onSubmit={vi.fn()} />);
+    render(
+      <PrepareClipContainer picker={{ pick }} store={store} client={{ prepareClip: vi.fn() }} />,
+    );
     choose();
     expect(await screen.findByRole("alert")).toHaveTextContent(/Could not open the folder picker/);
     choose();
