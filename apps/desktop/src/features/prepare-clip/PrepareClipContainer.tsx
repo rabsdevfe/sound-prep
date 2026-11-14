@@ -133,7 +133,7 @@ export function PrepareClipContainer({ picker, store, client }: PrepareClipConta
   };
 
   return (
-    <>
+    <div className="flex flex-col gap-3.5">
       <PrepareClipForm
         handleRef={formRef}
         values={values}
@@ -144,9 +144,19 @@ export function PrepareClipContainer({ picker, store, client }: PrepareClipConta
         onChooseDirectory={() => void handleChoose()}
         onSubmit={handleSubmit}
       />
-      {pickerError && <p role="alert">{pickerError}</p>}
-      <div role="status">{announcement(job)}</div>
+      {pickerError && (
+        <p
+          role="alert"
+          className="rounded-xl border border-danger/40 bg-danger/10 p-3 font-medium text-danger"
+        >
+          {pickerError}
+        </p>
+      )}
+      {/* Visually hidden: screen readers get stage changes here, sighted users see JobStatus. */}
+      <div role="status" className="sr-only">
+        {announcement(job)}
+      </div>
       <JobStatus state={job} />
-    </>
+    </div>
   );
 }
