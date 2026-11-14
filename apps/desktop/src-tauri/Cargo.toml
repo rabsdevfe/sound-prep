@@ -1,0 +1,27 @@
+[package]
+name = "sound-prep"
+version = "0.1.0"
+description = "macOS app to prepare YouTube audio clips for MainStage"
+authors = ["rabsdevfe"]
+license = "MIT"
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+# The `_lib` suffix keeps the lib name distinct from the bin name (cargo#8519).
+name = "sound_prep_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+# https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

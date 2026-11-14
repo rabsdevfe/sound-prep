@@ -2,6 +2,24 @@
 
 macOS desktop app that turns a YouTube URL, a title, an output directory and a time range into a full MP3 plus a clip. Planned: compare two clips and report sound differences to guide MainStage patch changes.
 
+## Stack
+
+- `apps/desktop/`: Tauri 2 shell (Rust) with a React + TypeScript UI.
+- `core/` (planned): Python core, shipped to the app as a sidecar binary.
+
+## Commands
+
+### Desktop (`apps/desktop/`)
+
+Use the Node version in `.nvmrc` (`nvm use`).
+
+```bash
+npm ci
+npm run lint && npm run typecheck && npm test && npm run build
+npm run tauri dev                      # run the app
+(cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings)
+```
+
 ## Architecture rules
 
 - **Hexagonal core.** Domain and use cases never import adapters or third-party I/O libraries; adapters implement ports.
