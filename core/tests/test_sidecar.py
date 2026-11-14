@@ -333,18 +333,6 @@ def test_entrypoint_exits_zero_on_stdin_eof() -> None:
     assert (result.returncode, result.stdout) == (0, b"")
 
 
-def test_entrypoint_answers_honestly_before_adapters_are_wired() -> None:
-    result = spawn(stdin=b"garbage\n" + req("w1"))
-    assert result.returncode == 0
-    messages = [json.loads(line) for line in result.stdout.splitlines()]
-    assert all(VALIDATOR.is_valid(m) for m in messages)
-    assert [(m["id"], m["code"]) for m in messages] == [
-        (None, "invalid_request"),
-        ("w1", "internal_error"),
-    ]
-    assert "no adapters wired" in messages[1]["message"]
-
-
 def test_entrypoint_keeps_stray_prints_off_stdout() -> None:
     code = (
         "import sys, os\n"
@@ -353,7 +341,7 @@ def test_entrypoint_keeps_stray_prints_off_stdout() -> None:
         "class H:\n"
         "    def execute(self, r):\n"
         "        print('stray'); os.write(1, b'raw fd write\\n'); raise InternalError('x')\n"
-        "m._unwired_factory = lambda p: H()\n"
+        "m.build_handler_factory = lambda env: lambda p: H()\n"
         "sys.exit(m.main([]))\n"
     )
     result = subprocess.run(

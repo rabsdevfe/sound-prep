@@ -9,21 +9,8 @@ import logging
 import os
 import sys
 
-from sound_prep_core.adapters.ipc.server import InternalError, RequestHandler, serve
-from sound_prep_core.domain.layout import OutputLayout
-from sound_prep_core.domain.ports import ProgressReporter
-from sound_prep_core.use_cases.prepare_clip import PrepareClipRequest
-
-
-class _Unwired:
-    """Placeholder until the real adapters are wired: every valid request fails honestly."""
-
-    def execute(self, request: PrepareClipRequest) -> OutputLayout:
-        raise InternalError("The core has no adapters wired yet; it cannot prepare clips")
-
-
-def _unwired_factory(_progress: ProgressReporter) -> RequestHandler:
-    return _Unwired()
+from sound_prep_core.adapters.ipc.server import serve
+from sound_prep_core.composition import build_handler_factory
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -36,6 +23,6 @@ def main(argv: list[str] | None = None) -> int:
     os.dup2(2, 1)
     sys.stdout = sys.stderr
     try:
-        return serve(sys.stdin.buffer, protocol_out, _unwired_factory)
+        return serve(sys.stdin.buffer, protocol_out, build_handler_factory(os.environ))
     finally:
         protocol_out.close()

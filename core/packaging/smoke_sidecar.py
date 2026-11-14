@@ -27,13 +27,15 @@ SCHEMA = json.loads((ROOT / "contracts" / "ipc.schema.json").read_text("utf-8"))
 TIMEOUT = 180  # the first run of a freshly copied onedir can take about 12 s (ADR 0001)
 
 
-def run(launcher: Path, *args: str, stdin: bytes = b"") -> subprocess.CompletedProcess[bytes]:
+def run(
+    launcher: Path, *args: str, stdin: bytes = b"", env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
         [str(launcher), *args],
         input=stdin,
         capture_output=True,
         timeout=TIMEOUT,
-        env={},
+        env=env or {},
         cwd="/",  # Finder launches with cwd "/", not the repository
         check=False,
     )
@@ -124,6 +126,31 @@ def main() -> int:
             [(m["id"], m["code"]) for m in messages]
             == [(None, "invalid_request"), ("smoke-1", "invalid_url")],
             "invalid requests answered per contract",
+        )
+
+        # A valid request with an unusable ffmpeg: a contract error naming ffmpeg, loop alive.
+        # No network: ffmpeg is only needed (and fails) at the first download step.
+        out_dir = Path(tmp) / "out"
+        out_dir.mkdir()
+        good_params = {**params, "url": "https://youtu.be/x", "output_dir": str(out_dir)}
+        valid = {**bad, "id": "smoke-2", "params": good_params}
+        lines = [json.dumps(valid), json.dumps(bad)]
+        result = run(
+            launcher,
+            stdin="\n".join(lines).encode() + b"\n",
+            env={"SOUND_PREP_FFMPEG": "/nonexistent/ffmpeg"},
+        )
+        messages = [json.loads(line) for line in result.stdout.splitlines()]
+        check(
+            result.returncode == 0 and all(validator.is_valid(m) for m in messages),
+            "valid request with missing ffmpeg: output validates",
+        )
+        errors = [m for m in messages if m["type"] == "error"]
+        check(
+            [(m["id"], m["code"]) for m in errors]
+            == [("smoke-2", "download_failed"), ("smoke-1", "invalid_url")]
+            and "ffmpeg" in errors[0]["message"].lower(),
+            "missing ffmpeg is a contract error naming ffmpeg and the loop keeps serving",
         )
     return 0
 
