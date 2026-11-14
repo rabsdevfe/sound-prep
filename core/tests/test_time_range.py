@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from sound_prep_core.domain.errors import DomainError, InvalidTimeRangeError
@@ -114,3 +116,26 @@ def test_error_is_a_domain_error_with_contract_code() -> None:
     err = InvalidTimeRangeError("boom")
     assert isinstance(err, DomainError)
     assert err.code == "invalid_time_range"
+
+
+@pytest.mark.parametrize("text", ["", "x", "1:60", "86401", "9" * 5000])
+def test_clip_time_cannot_be_constructed_invalid(text: str) -> None:
+    with pytest.raises(InvalidTimeRangeError):
+        ClipTime(text)
+
+
+def test_clip_time_seconds_is_derived_not_settable() -> None:
+    with pytest.raises(TypeError):
+        ClipTime("1:00", 5)  # type: ignore[call-arg]
+    assert ClipTime("1:00").seconds == 60
+
+
+def test_range_cannot_be_constructed_unordered() -> None:
+    with pytest.raises(InvalidTimeRangeError):
+        TimeRange(ClipTime("2"), ClipTime("1"))
+
+
+def test_replace_revalidates_clip_time() -> None:
+    with pytest.raises(InvalidTimeRangeError):
+        replace(ClipTime("1:00"), text="x")
+    assert replace(ClipTime("1:00"), text="2:00").seconds == 120
