@@ -1,5 +1,11 @@
+import tomllib
+from pathlib import Path
+
 import sound_prep_core
+
+PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
 
 def test_exposes_installed_version() -> None:
-    assert sound_prep_core.__version__ == "0.1.0"
+    declared = tomllib.loads(PYPROJECT.read_text(encoding="utf-8"))["project"]["version"]
+    assert sound_prep_core.__version__ == declared

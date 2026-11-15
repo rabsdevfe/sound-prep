@@ -1,6 +1,6 @@
 [package]
 name = "sound-prep"
-version = "0.1.0"
+version = "1.0.0"
 description = "macOS app to prepare YouTube audio clips for MainStage"
 authors = ["rabsdevfe"]
 license = "MIT"
