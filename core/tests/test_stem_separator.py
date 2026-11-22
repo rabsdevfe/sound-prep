@@ -124,23 +124,19 @@ def test_publishes_five_stems_with_piano_mixed_into_other(tmp_path: Path, ffmpeg
     assert {(dest / s.filename).stat().st_mode & 0o777 for s in Stem} == {0o666 & ~umask}
 
 
-def test_percent_is_monotonic_capped_while_running_and_ends_at_100(
-    tmp_path: Path, ffmpeg: Path
+@pytest.mark.parametrize(
+    ("mode", "expected"), [("ok", [0, 40, 99, 100]), ("short_bar", [0, 40, 100])]
+)
+def test_percent_is_capped_while_running_and_a_success_ends_at_100(
+    tmp_path: Path, ffmpeg: Path, mode: str, expected: list[int]
 ) -> None:
-    percents, _ = _separate(tmp_path, ffmpeg)
-    assert percents == [0, 40, 99, 100]
+    percents, _ = _separate(tmp_path, ffmpeg, mode)
+    assert percents == expected
     log = (tmp_path / "demucs.log").read_text()
     assert log.split()[1] == str(ffmpeg.parent)  # demucs finds ffmpeg through PATH
 
 
-def test_a_success_ends_with_100_even_if_demucs_stops_short(tmp_path: Path, ffmpeg: Path) -> None:
-    percents, _ = _separate(tmp_path, ffmpeg, "short_bar")
-    assert percents == [0, 40, 100]
-
-
-def test_retries_on_cpu_when_mps_fails_and_percent_never_decreases(
-    tmp_path: Path, ffmpeg: Path
-) -> None:
+def test_cpu_retry_after_mps_failure_keeps_percent_monotonic(tmp_path: Path, ffmpeg: Path) -> None:
     percents, dest = _separate(tmp_path, ffmpeg, "fail_mps_late", devices=("mps", "cpu"))
     devices = [line.split()[0] for line in (tmp_path / "demucs.log").read_text().splitlines()]
     assert devices == ["mps", "cpu"]
@@ -148,9 +144,7 @@ def test_retries_on_cpu_when_mps_fails_and_percent_never_decreases(
     assert (dest / "vocals.wav").is_file()
 
 
-def test_failure_reports_the_cause_and_leaves_existing_stems_untouched(
-    tmp_path: Path, ffmpeg: Path
-) -> None:
+def test_failure_reports_the_cause_and_keeps_existing_stems(tmp_path: Path, ffmpeg: Path) -> None:
     dest = tmp_path / "out" / "stems"
     dest.mkdir(parents=True)
     (dest / "drums.wav").write_bytes(b"old")
@@ -160,30 +154,23 @@ def test_failure_reports_the_cause_and_leaves_existing_stems_untouched(
     assert (dest / "drums.wav").read_bytes() == b"old"
 
 
-def test_missing_stem_in_demucs_output_fails_without_publishing(
-    tmp_path: Path, ffmpeg: Path
-) -> None:
+def test_missing_demucs_stem_fails_without_publishing(tmp_path: Path, ffmpeg: Path) -> None:
     with pytest.raises(SeparationFailedError, match="guitar"):
         _separate(tmp_path, ffmpeg, "incomplete")
     assert _names(tmp_path / "out" / "stems") == []
 
 
-def test_replaces_only_the_stem_files_in_the_destination(tmp_path: Path, ffmpeg: Path) -> None:
+def test_replaces_only_stem_files_and_clears_stale_staging(tmp_path: Path, ffmpeg: Path) -> None:
     dest = tmp_path / "out" / "stems"
-    dest.mkdir(parents=True)
+    stale = dest / ".sound-prep-stems-crashed"  # left by a SIGKILLed run
+    stale.mkdir(parents=True)
+    (stale / "big.wav").write_bytes(b"x")
     (dest / "drums.wav").write_bytes(b"old")
     (dest / "notes.txt").write_text("keep")
     _separate(tmp_path, ffmpeg)
     assert _samples(dest / "drums.wav")[0] == 1000
     assert (dest / "notes.txt").read_text() == "keep"
-
-
-def test_removes_staging_left_by_a_crashed_run(tmp_path: Path, ffmpeg: Path) -> None:
-    stale = tmp_path / "out" / "stems" / ".sound-prep-stems-crashed"
-    stale.mkdir(parents=True)
-    (stale / "big.wav").write_bytes(b"x")
-    _, dest = _separate(tmp_path, ffmpeg)
-    assert _names(dest) == sorted(s.filename for s in Stem)
+    assert _names(dest) == sorted([*(s.filename for s in Stem), "notes.txt"])
 
 
 def test_timeout_kills_demucs_and_its_children_promptly(tmp_path: Path, ffmpeg: Path) -> None:
@@ -205,7 +192,7 @@ def test_timeout_kills_demucs_and_its_children_promptly(tmp_path: Path, ffmpeg: 
         pytest.fail("the grandchild is still alive")
 
 
-def test_a_failing_percent_callback_does_not_stop_the_separation(
+def test_a_failing_callback_does_not_stop_it_and_a_missing_source_fails(
     tmp_path: Path, ffmpeg: Path
 ) -> None:
     def broken(_: int) -> None:
