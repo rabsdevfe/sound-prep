@@ -1,4 +1,4 @@
-"""Output layout: ``<dir>/<title>/<title>.mp3`` and ``<dir>/<title>/<start>_<end>.mp3``.
+"""Output layouts: ``<dir>/<title>/<title>.mp3``, the clip ``<start>_<end>.mp3`` or ``stems/``.
 
 Out of scope on purpose, shared with ``title``: constructors do no runtime type checks (inputs are
 typed and mypy runs in strict mode; runtime input arrives through the contract models), and
@@ -10,8 +10,55 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 
 from sound_prep_core.domain.errors import InvalidTitleError, OutputDirUnavailableError
+from sound_prep_core.domain.stems import Stem
 from sound_prep_core.domain.time_range import TimeRange
 from sound_prep_core.domain.title import FORBIDDEN_CATEGORIES, Title
+
+
+def _validated_folder(folder: PurePosixPath) -> PurePosixPath:
+    """NFC-normalize ``folder`` and check it is an absolute path ending in a valid title."""
+    text = unicodedata.normalize("NFC", str(folder))
+    if any(unicodedata.category(ch) in FORBIDDEN_CATEGORIES for ch in text):
+        raise OutputDirUnavailableError(
+            "Output directory contains control or invisible formatting characters"
+        )
+    folder = PurePosixPath(text)
+    if not folder.is_absolute():
+        raise OutputDirUnavailableError(f"Output directory must be absolute: {text!r}")
+    if ".." in folder.parts:
+        raise OutputDirUnavailableError(f"Output directory must not contain '..': {text!r}")
+    try:
+        valid_name = Title(folder.name).name == folder.name
+    except InvalidTitleError:
+        valid_name = False
+    if not valid_name:
+        raise OutputDirUnavailableError(f"Output folder has no valid title name: {text!r}")
+    return folder
+
+
+@dataclass(frozen=True, slots=True)
+class StemsLayout:
+    """``<dir>/<title>/<title>.mp3`` and the stems under ``<dir>/<title>/stems/``."""
+
+    folder: PurePosixPath
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "folder", _validated_folder(self.folder))
+
+    @property
+    def full_track(self) -> PurePosixPath:
+        return self.folder / f"{self.folder.name}.mp3"
+
+    @property
+    def stems_dir(self) -> PurePosixPath:
+        return self.folder / "stems"
+
+    def stem(self, stem: Stem) -> PurePosixPath:
+        return self.stems_dir / stem.filename
+
+    @classmethod
+    def compute(cls, output_dir: str, title: Title) -> "StemsLayout":
+        return cls(PurePosixPath(unicodedata.normalize("NFC", output_dir)) / title.name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,22 +74,7 @@ class OutputLayout:
     time_range: TimeRange
 
     def __post_init__(self) -> None:
-        text = unicodedata.normalize("NFC", str(self.folder))
-        if any(unicodedata.category(ch) in FORBIDDEN_CATEGORIES for ch in text):
-            raise OutputDirUnavailableError(
-                "Output directory contains control or invisible formatting characters"
-            )
-        folder = PurePosixPath(text)
-        if not folder.is_absolute():
-            raise OutputDirUnavailableError(f"Output directory must be absolute: {text!r}")
-        if ".." in folder.parts:
-            raise OutputDirUnavailableError(f"Output directory must not contain '..': {text!r}")
-        try:
-            valid_name = Title(folder.name).name == folder.name
-        except InvalidTitleError:
-            valid_name = False
-        if not valid_name:
-            raise OutputDirUnavailableError(f"Output folder has no valid title name: {text!r}")
+        folder = _validated_folder(self.folder)
         object.__setattr__(self, "folder", folder)
         if self.clip == self.full_track:
             # The title is what makes the clip name equal the track name, hence a title error.

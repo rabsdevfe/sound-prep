@@ -61,8 +61,9 @@ class _Reporter:
         self._id = request_id
         self._emit = emit
 
-    def report(self, stage: ProgressStage) -> None:
-        self._emit(ProgressEvent(v=1, id=self._id, type="progress", stage=stage.value))
+    def report(self, stage: ProgressStage, percent: int | None = None) -> None:
+        extra = {} if percent is None else {"percent": percent}  # the contract has no null percent
+        self._emit(ProgressEvent(v=1, id=self._id, type="progress", stage=stage.value, **extra))
 
 
 def _error(request_id: str | None, code: str, message: str) -> ErrorMessage:

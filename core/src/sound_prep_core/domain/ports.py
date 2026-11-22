@@ -94,6 +94,9 @@ class FileSystem(Protocol):
 
 
 class ProgressReporter(Protocol):
-    def report(self, stage: ProgressStage) -> None:
-        """Best effort: the use case ignores any exception raised here and carries on."""
+    def report(self, stage: ProgressStage, percent: int | None = None) -> None:
+        """``percent`` (0-100) is given only by stages that can measure it.
+
+        Best effort: the use case ignores any exception raised here and carries on.
+        """
         ...
