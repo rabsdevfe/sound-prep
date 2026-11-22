@@ -8,7 +8,8 @@ from sound_prep_core.domain.errors import (
     InvalidTitleError,
     OutputDirUnavailableError,
 )
-from sound_prep_core.domain.layout import OutputLayout
+from sound_prep_core.domain.layout import OutputLayout, StemsLayout
+from sound_prep_core.domain.stems import Stem
 from sound_prep_core.domain.time_range import TimeRange
 from sound_prep_core.domain.title import MAX_NAME_BYTES, Title
 
@@ -167,3 +168,11 @@ def test_layout_nfc_normalizes_output_dir() -> None:
     expected = PurePosixPath("/m/caf\u00e9/t")
     assert OutputLayout.compute("/m/cafe\u0301", Title("t"), rng).folder == expected
     assert OutputLayout(PurePosixPath("/m/cafe\u0301/t"), rng).folder == expected
+
+
+def test_stems_layout_puts_the_stems_under_the_title_folder() -> None:
+    layout = StemsLayout.compute("/out", Title("Song"))
+    assert layout.full_track == PurePosixPath("/out/Song/Song.mp3")
+    assert layout.stem(Stem.DRUMS) == PurePosixPath("/out/Song/stems/drums.wav")
+    with pytest.raises(OutputDirUnavailableError):
+        StemsLayout.compute("relative", Title("Song"))

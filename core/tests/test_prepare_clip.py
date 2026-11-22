@@ -87,7 +87,7 @@ class World:
         if self.mkdir_error:
             raise self.mkdir_error
 
-    def report(self, stage: ProgressStage) -> None:
+    def report(self, stage: ProgressStage, percent: int | None = None) -> None:
         self.events.append(f"progress {stage.value}")
         if self.report_error:
             raise self.report_error
