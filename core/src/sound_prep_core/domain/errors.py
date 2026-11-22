@@ -31,3 +31,7 @@ class DownloadFailedError(DomainError):
 
 class CutFailedError(DomainError):
     code: ClassVar[str] = "cut_failed"
+
+
+class SeparationFailedError(DomainError):
+    code: ClassVar[str] = "separation_failed"

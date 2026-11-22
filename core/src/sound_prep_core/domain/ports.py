@@ -9,6 +9,7 @@ renamed into place only on success, so the final name never holds a partial file
 are never treated as the track or the clip.
 """
 
+from collections.abc import Callable
 from enum import StrEnum
 from pathlib import PurePosixPath
 from typing import Protocol
@@ -21,6 +22,7 @@ class ProgressStage(StrEnum):
 
     DOWNLOADING = "downloading"
     CUTTING = "cutting"
+    SEPARATING = "separating"
 
 
 class TrackDownloader(Protocol):
@@ -41,6 +43,33 @@ class ClipCutter(Protocol):
 
         Must publish atomically (temporary name, then rename over any existing clip on success) and
         must never write to ``source``. It must raise rather than succeed without writing.
+        """
+        ...
+
+
+class StemSeparator(Protocol):
+    """Splits a track into one WAV file per ``Stem``.
+
+    Progress is best effort, like ``ProgressReporter``: an exception raised by ``on_percent`` is
+    swallowed by the separator and never fails the separation.
+    """
+
+    def separate(
+        self,
+        source: PurePosixPath,
+        destination: PurePosixPath,
+        on_percent: Callable[[int], None],
+    ) -> None:
+        """Write one ``<stem>.wav`` per ``Stem`` into the folder ``destination``, replacing them.
+
+        Raises ``SeparationFailedError``, also when ``source`` does not exist. Creates
+        ``destination`` when missing and never writes to ``source``. Only the five ``<stem>.wav``
+        files are replaced; other files in ``destination`` are untouched. All five are fully
+        staged before any is renamed into place, so a failure while producing them leaves the
+        existing stems as they were.
+
+        ``on_percent`` receives integers from 0 to 100, never decreasing and only when the value
+        changes; a successful run ends with a final 100.
         """
         ...
 
