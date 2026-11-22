@@ -112,11 +112,12 @@
         "output_dir_unavailable",
         "download_failed",
         "cut_failed",
+        "separation_failed",
         "internal_error"
       ]
     },
     "PrepareClipRequest": {
-      "description": "UI -> core: download a track and cut a clip.",
+      "description": "UI -> core: download a track and either cut a clip or, with separate_stems, separate it into stems.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -141,9 +142,7 @@
           "required": [
             "url",
             "title",
-            "output_dir",
-            "start",
-            "end"
+            "output_dir"
           ],
           "properties": {
             "url": {
@@ -160,11 +159,59 @@
               "$ref": "#/$defs/AbsolutePath"
             },
             "start": {
+              "description": "Required unless separate_stems is true, in which case it must be absent.",
               "$ref": "#/$defs/ClipTime"
             },
             "end": {
+              "description": "Required unless separate_stems is true, in which case it must be absent.",
               "$ref": "#/$defs/ClipTime"
+            },
+            "separate_stems": {
+              "description": "When true, separate the whole track into stems instead of cutting a clip. Defaults to false when absent.",
+              "type": "boolean"
             }
+          },
+          "if": {
+            "required": [
+              "separate_stems"
+            ],
+            "properties": {
+              "separate_stems": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "properties": {
+                    "start": true
+                  },
+                  "required": [
+                    "start"
+                  ]
+                },
+                {
+                  "properties": {
+                    "end": true
+                  },
+                  "required": [
+                    "end"
+                  ]
+                }
+              ]
+            }
+          },
+          "else": {
+            "properties": {
+              "start": true,
+              "end": true
+            },
+            "required": [
+              "start",
+              "end"
+            ]
           }
         }
       }
@@ -192,13 +239,43 @@
         "stage": {
           "enum": [
             "downloading",
-            "cutting"
+            "cutting",
+            "separating"
           ]
         },
         "percent": {
           "type": "number",
           "minimum": 0,
           "maximum": 100
+        }
+      }
+    },
+    "Stems": {
+      "description": "Final stems of a separated track, each an absolute path to an audio file.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "drums",
+        "bass",
+        "vocals",
+        "guitar",
+        "other"
+      ],
+      "properties": {
+        "drums": {
+          "$ref": "#/$defs/AbsolutePath"
+        },
+        "bass": {
+          "$ref": "#/$defs/AbsolutePath"
+        },
+        "vocals": {
+          "$ref": "#/$defs/AbsolutePath"
+        },
+        "guitar": {
+          "$ref": "#/$defs/AbsolutePath"
+        },
+        "other": {
+          "$ref": "#/$defs/AbsolutePath"
         }
       }
     },
@@ -211,8 +288,7 @@
         "id",
         "type",
         "folder",
-        "full_track",
-        "clip"
+        "full_track"
       ],
       "properties": {
         "v": {
@@ -231,9 +307,31 @@
           "$ref": "#/$defs/AbsolutePath"
         },
         "clip": {
+          "description": "Present for a clip request; exactly one of clip or stems.",
           "$ref": "#/$defs/AbsolutePath"
+        },
+        "stems": {
+          "$ref": "#/$defs/Stems"
         }
-      }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "clip": true
+          },
+          "required": [
+            "clip"
+          ]
+        },
+        {
+          "properties": {
+            "stems": true
+          },
+          "required": [
+            "stems"
+          ]
+        }
+      ]
     },
     "ErrorMessage": {
       "description": "core -> UI: failure.",

@@ -6,7 +6,7 @@ To add a command, add a model, add it to ``IpcMessage`` and update the schema in
 """
 
 from collections.abc import Mapping
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Self
 
 from pydantic import (
     BaseModel,
@@ -16,6 +16,7 @@ from pydantic import (
     StringConstraints,
     TypeAdapter,
     field_validator,
+    model_validator,
 )
 
 # Patterns are copied verbatim from the schema. They must run on Python's `re` (not pydantic's
@@ -45,7 +46,7 @@ AbsolutePath = Annotated[str, StringConstraints(pattern=ABSOLUTE_PATH_PATTERN)]
 ClipTime = Annotated[str, StringConstraints(pattern=CLIP_TIME_PATTERN)]
 HttpUrl = Annotated[str, StringConstraints(pattern=URL_PATTERN)]
 
-Stage = Literal["downloading", "cutting"]
+Stage = Literal["downloading", "cutting", "separating"]
 ErrorCode = Literal[
     "invalid_request",
     "unsupported_version",
@@ -55,6 +56,7 @@ ErrorCode = Literal[
     "output_dir_unavailable",
     "download_failed",
     "cut_failed",
+    "separation_failed",
     "internal_error",
 ]
 
@@ -69,8 +71,27 @@ class PrepareClipParams(_Model):
     url: HttpUrl
     title: Annotated[str, StringConstraints(min_length=1, max_length=120)]
     output_dir: AbsolutePath
-    start: ClipTime
-    end: ClipTime
+    start: ClipTime | None = None
+    end: ClipTime | None = None
+    separate_stems: bool = False
+
+    @field_validator("start", "end", "separate_stems", mode="before")
+    @classmethod
+    def _absent_or_value(cls, value: Any) -> Any:
+        # Optional fields may be omitted, but an explicit null is never valid.
+        if value is None:
+            raise ValueError("must be omitted, not null")
+        return value
+
+    @model_validator(mode="after")
+    def _time_range_matches_mode(self) -> Self:
+        has_range = "start" in self.model_fields_set or "end" in self.model_fields_set
+        if self.separate_stems:
+            if has_range:
+                raise ValueError("start and end must be absent when separate_stems is true")
+        elif "start" not in self.model_fields_set or "end" not in self.model_fields_set:
+            raise ValueError("start and end are required unless separate_stems is true")
+        return self
 
 
 class PrepareClipRequest(_Model):
@@ -103,15 +124,37 @@ class ProgressEvent(_Model):
         return value
 
 
+class Stems(_Model):
+    drums: AbsolutePath
+    bass: AbsolutePath
+    vocals: AbsolutePath
+    guitar: AbsolutePath
+    other: AbsolutePath
+
+
 class ResultMessage(_Model):
-    """Core -> UI, terminal success."""
+    """Core -> UI, terminal success. Exactly one of ``clip`` or ``stems`` is present."""
 
     v: Version
     id: MessageId
     type: Literal["result"]
     folder: AbsolutePath
     full_track: AbsolutePath
-    clip: AbsolutePath
+    clip: AbsolutePath | None = None
+    stems: Stems | None = None
+
+    @field_validator("clip", "stems", mode="before")
+    @classmethod
+    def _absent_or_value(cls, value: Any) -> Any:
+        if value is None:
+            raise ValueError("must be omitted, not null")
+        return value
+
+    @model_validator(mode="after")
+    def _exactly_one_output(self) -> Self:
+        if ("clip" in self.model_fields_set) == ("stems" in self.model_fields_set):
+            raise ValueError("exactly one of clip or stems must be present")
+        return self
 
 
 class ErrorMessage(_Model):

@@ -11,14 +11,30 @@ export type MessageId = string
  */
 export type AbsolutePath = string
 /**
- * SS, MM:SS or HH:MM:SS. Minutes and seconds are 00-59 unless they are the leading field. Ordering of start and end is domain logic.
+ * core -> UI: successful completion.
  */
-export type ClipTime = string
-export type ErrorCode = ("invalid_request" | "unsupported_version" | "invalid_url" | "invalid_time_range" | "invalid_title" | "output_dir_unavailable" | "download_failed" | "cut_failed" | "internal_error")
+export type ResultMessage = ({
+v: Version
+id: MessageId
+type: "result"
+folder: AbsolutePath
+full_track: AbsolutePath
+/**
+ * POSIX absolute path; control characters and line separators are rejected.
+ */
+clip?: string
+stems?: Stems
+} & ResultMessage1)
+export type ResultMessage1 = ({
+clip: unknown
+} | {
+stems: unknown
+})
+export type ErrorCode = ("invalid_request" | "unsupported_version" | "invalid_url" | "invalid_time_range" | "invalid_title" | "output_dir_unavailable" | "download_failed" | "cut_failed" | "separation_failed" | "internal_error")
 export type NonEmptyString = string
 
 /**
- * UI -> core: download a track and cut a clip.
+ * UI -> core: download a track and either cut a clip or, with separate_stems, separate it into stems.
  */
 export interface PrepareClipRequest {
 v: Version
@@ -31,8 +47,18 @@ params: {
 url: string
 title: string
 output_dir: AbsolutePath
-start: ClipTime
-end: ClipTime
+/**
+ * Required unless separate_stems is true, in which case it must be absent.
+ */
+start?: string
+/**
+ * Required unless separate_stems is true, in which case it must be absent.
+ */
+end?: string
+/**
+ * When true, separate the whole track into stems instead of cutting a clip. Defaults to false when absent.
+ */
+separate_stems?: boolean
 }
 }
 /**
@@ -42,19 +68,18 @@ export interface ProgressEvent {
 v: Version
 id: MessageId
 type: "progress"
-stage: ("downloading" | "cutting")
+stage: ("downloading" | "cutting" | "separating")
 percent?: number
 }
 /**
- * core -> UI: successful completion.
+ * Final stems of a separated track, each an absolute path to an audio file.
  */
-export interface ResultMessage {
-v: Version
-id: MessageId
-type: "result"
-folder: AbsolutePath
-full_track: AbsolutePath
-clip: AbsolutePath
+export interface Stems {
+drums: AbsolutePath
+bass: AbsolutePath
+vocals: AbsolutePath
+guitar: AbsolutePath
+other: AbsolutePath
 }
 /**
  * core -> UI: failure.

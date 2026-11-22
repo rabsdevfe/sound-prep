@@ -40,6 +40,7 @@ _FIELD_ERRORS = {
     "end": ("invalid_time_range", "The end time must be SS, MM:SS or HH:MM:SS"),
     "output_dir": ("output_dir_unavailable", "The output directory must be an absolute path"),
 }
+_STEMS_UNAVAILABLE = "Stem separation is not available yet"
 _CODES = frozenset(get_args(ErrorCode))
 
 
@@ -162,6 +163,10 @@ def serve(stdin: BinaryIO, stdout: BinaryIO, make_handler: HandlerFactory) -> in
         request_id = known_id = parsed.id
         try:
             p = parsed.params
+            if p.separate_stems:
+                emit(_error(request_id, "separation_failed", _STEMS_UNAVAILABLE))
+                return
+            assert p.start is not None and p.end is not None  # the model requires both here
             layout = make_handler(_Reporter(request_id, emit)).execute(
                 DomainRequest(p.url, p.title, p.output_dir, p.start, p.end)
             )

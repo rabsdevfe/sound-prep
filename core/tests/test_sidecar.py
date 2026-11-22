@@ -105,6 +105,43 @@ def test_success_emits_progress_in_order_then_one_result_with_the_request_id() -
     assert messages[2]["folder"] == "/out/Song"
 
 
+def test_separate_stems_is_answered_with_separation_failed_until_the_feature_lands() -> None:
+    params = {k: v for k, v in PARAMS.items() if k not in {"start", "end"}}
+    body = {
+        "v": 1,
+        "id": "s1",
+        "type": "prepare_clip",
+        "params": {**params, "separate_stems": True},
+    }
+    called: list[str] = []
+    code, messages = run(json.dumps(body).encode() + b"\n", lambda: called.append("ran"))
+    assert code == 0
+    assert called == []
+    assert [(m["type"], m["id"], m["code"]) for m in messages] == [
+        ("error", "s1", "separation_failed")
+    ]
+    assert "not available" in messages[0]["message"]
+
+
+@pytest.mark.parametrize("keep", [["start"], ["end"], ["start", "end"]])
+def test_separate_stems_true_with_a_time_range_is_invalid_request(keep: list[str]) -> None:
+    params = {k: v for k, v in PARAMS.items() if k not in {"start", "end"} or k in keep}
+    body = {
+        "v": 1,
+        "id": "s2",
+        "type": "prepare_clip",
+        "params": {**params, "separate_stems": True},
+    }
+    _, messages = run(json.dumps(body).encode() + b"\n")
+    assert [(m["id"], m["code"]) for m in messages] == [("s2", "invalid_request")]
+
+
+def test_separate_stems_false_keeps_the_clip_behaviour() -> None:
+    _, messages = run(req("s3", separate_stems=False))
+    assert messages[-1]["type"] == "result"
+    assert messages[-1]["clip"] == "/out/Song/0-10_0-20.mp3"
+
+
 def test_eof_without_trailing_newline_still_handles_the_last_request() -> None:
     _, messages = run(req().rstrip(b"\n"))
     assert messages[-1]["type"] == "result"

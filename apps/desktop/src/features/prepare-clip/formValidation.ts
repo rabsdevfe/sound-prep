@@ -84,10 +84,13 @@ export function validateForm(values: FormValues): FieldErrors {
       }
     }
   }
+  const { start, end } = request.params;
   if (
     !errors.start &&
     !errors.end &&
-    clipTimeToSeconds(request.params.end) <= clipTimeToSeconds(request.params.start)
+    start !== undefined &&
+    end !== undefined &&
+    clipTimeToSeconds(end) <= clipTimeToSeconds(start)
   ) {
     errors.end = "End must be after start.";
   }
