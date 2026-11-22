@@ -3,7 +3,7 @@ import type { ErrorCode, ResultMessage } from "../../ipc/types.generated";
 export type JobState =
   | { status: "idle" }
   // "starting" is a UI-only state (request sent, no event yet); it is not part of the IPC contract.
-  | { status: "running"; stage: "downloading" | "cutting" | "starting"; percent?: number; slow?: boolean }
+  | { status: "running"; stage: "downloading" | "cutting" | "separating" | "starting"; percent?: number; slow?: boolean }
   | { status: "success"; result: ResultMessage }
   | { status: "error"; code: ErrorCode | EngineErrorCode };
 
@@ -21,6 +21,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   output_dir_unavailable: "The output directory cannot be used. Choose another directory.",
   download_failed: "The track could not be downloaded. Check the URL and your connection.",
   cut_failed: "The clip could not be cut from the track. Check the start and end times.",
+  separation_failed: "The track could not be separated into stems. Try again.",
   internal_error: "Something went wrong inside the app. Try again.",
 };
 
@@ -52,6 +53,7 @@ const STAGE_ANNOUNCEMENT = {
   starting: "Starting…",
   downloading: "Downloading…",
   cutting: "Cutting…",
+  separating: "Separating…",
 };
 
 /** Text for the persistent live region: stage changes and completion, never percent updates. */

@@ -83,9 +83,37 @@
     "keyword": "pattern",
     "path": "/folder"
   },
-  "result_missing_clip.json": {
-    "keyword": "required",
+  "result_clip_and_stems.json": {
+    "keyword": "oneOf",
     "path": ""
+  },
+  "result_neither_clip_nor_stems.json": {
+    "keyword": "oneOf",
+    "path": ""
+  },
+  "result_null_clip.json": {
+    "keyword": "type",
+    "path": "/clip"
+  },
+  "result_stems_missing_key.json": {
+    "keyword": "required",
+    "path": "/stems"
+  },
+  "separate_stems_false_without_time_range.json": {
+    "keyword": "required",
+    "path": "/params"
+  },
+  "separate_stems_not_boolean.json": {
+    "keyword": "type",
+    "path": "/params/separate_stems"
+  },
+  "separate_stems_with_start_only.json": {
+    "keyword": "not",
+    "path": "/params"
+  },
+  "separate_stems_with_time_range.json": {
+    "keyword": "not",
+    "path": "/params"
   },
   "title_too_long.json": {
     "keyword": "maxLength",

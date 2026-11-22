@@ -10,6 +10,7 @@ from sound_prep_core.adapters.ipc.messages import (
     ProgressEvent,
     ResultMessage,
     Stage,
+    Stems,
     parse_message,
     to_line,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "ProgressEvent",
     "ResultMessage",
     "Stage",
+    "Stems",
     "parse_message",
     "to_line",
 ]

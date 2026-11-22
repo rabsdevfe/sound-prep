@@ -56,6 +56,28 @@ describe("JobStatus presentation", () => {
     }
   });
 
+  it("lists the stems instead of a clip when the result carries stems", () => {
+    const base = { v: 1, id: "job-1", type: "result", folder: result.folder, full_track: result.full_track } as const;
+    const stems = {
+      drums: "/m/drums.mp3",
+      bass: "/m/bass.mp3",
+      vocals: "/m/vocals.mp3",
+      guitar: "/m/guitar.mp3",
+      other: "/m/other.mp3",
+    };
+    show({ status: "success", result: { ...base, stems } });
+    expect(screen.getByText("Stems ready")).toBeInTheDocument();
+    expect(screen.queryByText("Clip")).not.toBeInTheDocument();
+    for (const [name, path] of Object.entries(stems)) {
+      expect(screen.getByText(`Stem: ${name}`).nextElementSibling).toHaveTextContent(path);
+    }
+  });
+
+  it("names the separating stage", () => {
+    show({ status: "running", stage: "separating", percent: 30 });
+    expect(screen.getByText("Separating the stems")).toBeInTheDocument();
+  });
+
   it("renders an error as a single alert with the human message", () => {
     show({ status: "error", code: "download_failed" });
     expect(screen.getAllByRole("alert")).toHaveLength(1);
